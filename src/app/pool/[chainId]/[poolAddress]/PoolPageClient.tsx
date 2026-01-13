@@ -51,6 +51,13 @@ const TradePanel = dynamic(() => import('@/components/TradePanel'), {
   ),
 });
 
+const WalletButton = dynamic(() => import('@/components/WalletButton'), {
+  ssr: false,
+  loading: () => (
+    <div className="px-3 py-1.5 bg-[#21262d] rounded animate-pulse w-24 h-8" />
+  ),
+});
+
 interface PoolPageClientProps {
   pool: PoolInfo;
 }
@@ -165,9 +172,16 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
             />
           </div>
 
-          {/* Right: 24h change */}
-          <div className={`text-xs sm:text-sm font-medium flex-shrink-0 ${priceChangeColor}`}>
-            {formatPercentage(pool.priceChange24h)}
+          {/* Right: 24h change + Wallet */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className={`text-xs sm:text-sm font-medium ${priceChangeColor}`}>
+              {formatPercentage(pool.priceChange24h)}
+            </div>
+            <WalletButton
+              chainId={pool.chainId}
+              baseTokenAddress={pool.baseToken.address}
+              baseSymbol={pool.baseToken.symbol}
+            />
           </div>
         </div>
       </header>
