@@ -68,7 +68,7 @@ export default function Chart({
       const timer = setTimeout(() => {
         setShowTradeEffect(null);
         onTradeEffectComplete?.();
-      }, 1200);
+      }, 2500);
       return () => clearTimeout(timer);
     }
   }, [tradeEffect, onTradeEffectComplete]);
@@ -423,16 +423,16 @@ export default function Chart({
                 }
               }
               .animate-buy-beam {
-                animation: buy-beam 1s ease-out forwards;
+                animation: buy-beam 2s ease-out forwards;
               }
               .animate-buy-flash {
-                animation: buy-flash 0.5s ease-in-out;
+                animation: buy-flash 1s ease-in-out;
               }
               .animate-sell-beam {
-                animation: sell-beam 1s ease-out forwards;
+                animation: sell-beam 2s ease-out forwards;
               }
               .animate-sell-flash {
-                animation: sell-flash 0.5s ease-in-out;
+                animation: sell-flash 1s ease-in-out;
               }
             `}</style>
           </>

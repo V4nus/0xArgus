@@ -59,7 +59,6 @@ export default function TradePanel({
   const [tradeStatus, setTradeStatus] = useState<TradeStatus>('idle');
   const [orderId, setOrderId] = useState<string | null>(null);
   const [tradeError, setTradeError] = useState<string | null>(null);
-  const [showFireEffect, setShowFireEffect] = useState(false);
   const [tradeDetails, setTradeDetails] = useState<{
     sellAmount: string;
     buyAmount: string;
@@ -356,9 +355,7 @@ export default function TradePanel({
         buySymbol: tradeType === 'buy' ? baseSymbol : quoteSymbol,
       });
 
-      // Trigger eye logo animation (local) and chart beam effect (parent)
-      setShowFireEffect(true);
-      setTimeout(() => setShowFireEffect(false), 1500);
+      // Trigger chart beam effect (parent)
       onTradeSuccess?.(tradeType);
 
       // Reset form after success
@@ -407,88 +404,6 @@ export default function TradePanel({
 
   return (
     <div className="bg-[#161b22] rounded-lg border border-[#30363d] overflow-hidden relative">
-      {/* Eye Logo Success Animation - Full screen flash */}
-      {showFireEffect && (
-        <div className="fixed inset-0 pointer-events-none z-[100] flex items-center justify-center animate-eye-flash">
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-black/80" />
-
-          {/* Glowing eye icon */}
-          <div className="relative animate-eye-appear">
-            <svg width="120" height="120" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_0_30px_#3fb950]">
-              {/* Outer eye shape */}
-              <path d="M24 8C12 8 2 24 2 24C2 24 12 40 24 40C36 40 46 24 46 24C46 24 36 8 24 8Z" stroke="#3fb950" strokeWidth="2.5" fill="none" className="animate-eye-stroke"/>
-              {/* Iris */}
-              <circle cx="24" cy="24" r="10" stroke="#3fb950" strokeWidth="2" fill="none"/>
-              {/* Pupil with glow */}
-              <circle cx="24" cy="24" r="5" fill="#3fb950" className="animate-pulse"/>
-              {/* Light reflection */}
-              <circle cx="27" cy="21" r="2" fill="#0d1117"/>
-            </svg>
-          </div>
-        </div>
-      )}
-
-      {/* Inline styles for eye animation */}
-      <style jsx>{`
-        @keyframes eye-flash {
-          0% {
-            opacity: 0;
-          }
-          10% {
-            opacity: 1;
-          }
-          80% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-          }
-        }
-        @keyframes eye-appear {
-          0% {
-            transform: scale(0.5);
-            opacity: 0;
-          }
-          20% {
-            transform: scale(1.1);
-            opacity: 1;
-          }
-          30% {
-            transform: scale(1);
-          }
-          70% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(1.2);
-            opacity: 0;
-          }
-        }
-        @keyframes eye-stroke {
-          0% {
-            stroke-dasharray: 200;
-            stroke-dashoffset: 200;
-          }
-          50% {
-            stroke-dashoffset: 0;
-          }
-          100% {
-            stroke-dashoffset: 0;
-          }
-        }
-        .animate-eye-flash {
-          animation: eye-flash 1.5s ease-in-out forwards;
-        }
-        .animate-eye-appear {
-          animation: eye-appear 1.5s ease-out forwards;
-        }
-        .animate-eye-stroke {
-          animation: eye-stroke 0.8s ease-out forwards;
-        }
-      `}</style>
-
       {/* Header: Swap label + refresh */}
       <div className="px-3 py-2 border-b border-[#30363d] flex items-center justify-between">
         <span className="text-sm font-medium">Swap</span>
