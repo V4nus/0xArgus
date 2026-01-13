@@ -30,6 +30,21 @@ export interface Translations {
     chains: string;
     pools: string;
     latency: string;
+    // New homepage
+    heroTitle: string;
+    heroHighlight: string;
+    heroSubtitle: string;
+    featureDepth: string;
+    featureDepthDesc: string;
+    featureRealTime: string;
+    featureRealTimeDesc: string;
+    featureImpact: string;
+    featureImpactDesc: string;
+    ctaExplore: string;
+    mcap: string;
+    realLiquidity: string;
+    priceImpact: string;
+    depthScanner: string;
   };
 
   // Trade Panel
@@ -151,6 +166,20 @@ export const translations: Record<Language, Translations> = {
       chains: 'Chains',
       pools: 'Pools',
       latency: 'Latency',
+      heroTitle: 'Dive Into',
+      heroHighlight: 'Liquidity Depth',
+      heroSubtitle: 'Like a sonar scanning the ocean floor, we reveal the true depth of AMM liquidity. See how much real buying power exists at every price level.',
+      featureDepth: 'Depth Scanner',
+      featureDepthDesc: 'Analyze liquidity distribution across all price ranges',
+      featureRealTime: 'Real-Time Sonar',
+      featureRealTimeDesc: 'Live updates as liquidity shifts in the pool',
+      featureImpact: 'Impact Predictor',
+      featureImpactDesc: 'Know your price impact before you trade',
+      ctaExplore: 'Start Exploring',
+      mcap: 'Market Cap',
+      realLiquidity: 'Real Liquidity',
+      priceImpact: 'Price Impact',
+      depthScanner: 'Liquidity Depth Scanner',
     },
     trade: {
       swap: 'Swap',
@@ -257,6 +286,20 @@ export const translations: Record<Language, Translations> = {
       chains: '체인',
       pools: '풀',
       latency: '지연시간',
+      heroTitle: '깊이 탐색',
+      heroHighlight: '유동성 심층 분석',
+      heroSubtitle: '해저를 스캔하는 소나처럼, AMM 유동성의 진정한 깊이를 보여드립니다. 각 가격대에 얼마나 많은 실제 구매력이 있는지 확인하세요.',
+      featureDepth: '깊이 스캐너',
+      featureDepthDesc: '모든 가격 범위에서 유동성 분포를 분석합니다',
+      featureRealTime: '실시간 소나',
+      featureRealTimeDesc: '풀의 유동성 변화를 실시간으로 업데이트',
+      featureImpact: '영향 예측기',
+      featureImpactDesc: '거래 전 가격 영향을 미리 알 수 있습니다',
+      ctaExplore: '탐색 시작',
+      mcap: '시가총액',
+      realLiquidity: '실제 유동성',
+      priceImpact: '가격 영향',
+      depthScanner: '유동성 깊이 스캐너',
     },
     trade: {
       swap: '스왑',
@@ -363,6 +406,20 @@ export const translations: Record<Language, Translations> = {
       chains: 'チェーン',
       pools: 'プール',
       latency: 'レイテンシ',
+      heroTitle: '深海へ',
+      heroHighlight: '流動性の深度',
+      heroSubtitle: '海底をスキャンするソナーのように、AMM流動性の真の深さを明らかにします。各価格レベルにどれだけの実際の購買力があるかを確認。',
+      featureDepth: '深度スキャナー',
+      featureDepthDesc: 'すべての価格帯で流動性分布を分析',
+      featureRealTime: 'リアルタイムソナー',
+      featureRealTimeDesc: 'プール内の流動性シフトをライブ更新',
+      featureImpact: 'インパクト予測',
+      featureImpactDesc: '取引前に価格インパクトを把握',
+      ctaExplore: '探索を開始',
+      mcap: '時価総額',
+      realLiquidity: '実際の流動性',
+      priceImpact: '価格インパクト',
+      depthScanner: '流動性深度スキャナー',
     },
     trade: {
       swap: 'スワップ',
@@ -469,6 +526,20 @@ export const translations: Record<Language, Translations> = {
       chains: 'Cadenas',
       pools: 'Pools',
       latency: 'Latencia',
+      heroTitle: 'Sumérgete en la',
+      heroHighlight: 'Profundidad de Liquidez',
+      heroSubtitle: 'Como un sonar escaneando el fondo del océano, revelamos la verdadera profundidad de la liquidez AMM. Descubre cuánto poder de compra real existe en cada nivel de precio.',
+      featureDepth: 'Escáner de Profundidad',
+      featureDepthDesc: 'Analiza la distribución de liquidez en todos los rangos de precio',
+      featureRealTime: 'Sonar en Tiempo Real',
+      featureRealTimeDesc: 'Actualizaciones en vivo cuando la liquidez cambia en el pool',
+      featureImpact: 'Predictor de Impacto',
+      featureImpactDesc: 'Conoce tu impacto de precio antes de operar',
+      ctaExplore: 'Comenzar a Explorar',
+      mcap: 'Cap. de Mercado',
+      realLiquidity: 'Liquidez Real',
+      priceImpact: 'Impacto de Precio',
+      depthScanner: 'Escáner de Profundidad de Liquidez',
     },
     trade: {
       swap: 'Intercambiar',
@@ -575,6 +646,20 @@ export const translations: Record<Language, Translations> = {
       chains: 'Redes',
       pools: 'Pools',
       latency: 'Latência',
+      heroTitle: 'Mergulhe na',
+      heroHighlight: 'Profundidade da Liquidez',
+      heroSubtitle: 'Como um sonar escaneando o fundo do oceano, revelamos a verdadeira profundidade da liquidez AMM. Veja quanto poder de compra real existe em cada nível de preço.',
+      featureDepth: 'Scanner de Profundidade',
+      featureDepthDesc: 'Analise a distribuição de liquidez em todas as faixas de preço',
+      featureRealTime: 'Sonar em Tempo Real',
+      featureRealTimeDesc: 'Atualizações ao vivo quando a liquidez muda no pool',
+      featureImpact: 'Preditor de Impacto',
+      featureImpactDesc: 'Saiba seu impacto de preço antes de negociar',
+      ctaExplore: 'Começar a Explorar',
+      mcap: 'Cap. de Mercado',
+      realLiquidity: 'Liquidez Real',
+      priceImpact: 'Impacto de Preço',
+      depthScanner: 'Scanner de Profundidade de Liquidez',
     },
     trade: {
       swap: 'Trocar',
@@ -681,6 +766,20 @@ export const translations: Record<Language, Translations> = {
       chains: 'Сети',
       pools: 'Пулы',
       latency: 'Задержка',
+      heroTitle: 'Погрузитесь в',
+      heroHighlight: 'Глубину Ликвидности',
+      heroSubtitle: 'Как сонар, сканирующий дно океана, мы раскрываем истинную глубину ликвидности AMM. Узнайте, сколько реальной покупательной способности существует на каждом уровне цены.',
+      featureDepth: 'Сканер Глубины',
+      featureDepthDesc: 'Анализ распределения ликвидности по всем ценовым диапазонам',
+      featureRealTime: 'Сонар Реального Времени',
+      featureRealTimeDesc: 'Обновления в реальном времени при изменении ликвидности',
+      featureImpact: 'Предиктор Влияния',
+      featureImpactDesc: 'Узнайте влияние на цену до совершения сделки',
+      ctaExplore: 'Начать Исследование',
+      mcap: 'Рын. Капитал',
+      realLiquidity: 'Реальная Ликвидность',
+      priceImpact: 'Влияние на Цену',
+      depthScanner: 'Сканер Глубины Ликвидности',
     },
     trade: {
       swap: 'Обмен',
