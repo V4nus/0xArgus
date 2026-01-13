@@ -551,8 +551,8 @@ export default function LiquidityDepth({
             <span className="text-right">USD</span>
           </div>
 
-          {/* Asks (sell side) - above current price - scrollable */}
-          <div className="flex-1 overflow-y-auto space-y-0.5 mb-2 scrollbar-thin min-h-0">
+          {/* Asks (sell side) - above current price - scrollable, bottom-aligned */}
+          <div className="flex-1 overflow-y-auto flex flex-col justify-end mb-2 scrollbar-thin min-h-0">
             {filteredData.asks.length === 0 ? (
               <div className="text-xs text-gray-500 text-center py-2">No asks in range</div>
             ) : (
@@ -595,28 +595,32 @@ export default function LiquidityDepth({
                 });
                 const maxCumLiquidity = viewMode === 'cumulative' ? asksWithCumulative[asksWithCumulative.length - 1]?.cumLiquidityUSD || 1 : maxLiquidity;
 
-                return asksWithCumulative.reverse().map((level, i) => {
-                  const displayBase = viewMode === 'cumulative' ? level.cumBaseAmount : level.baseAmount;
-                  const displayQuote = viewMode === 'cumulative' ? level.cumQuoteAmount : level.quoteAmount;
-                  const displayUsd = viewMode === 'cumulative' ? level.cumLiquidityUSD : level.liquidityUSD;
-                  const priceInUsd = level.price; // Already in USD from API (calculated using priceUsd param)
-                  const displayLiquidity = viewMode === 'cumulative' ? level.cumLiquidityUSD : level.liquidityUSD;
-                  const baseHighlight = getHighlightClass('ask', level.price, 'base');
-                  const quoteHighlight = getHighlightClass('ask', level.price, 'quote');
-                  return (
-                    <div key={`ask-${i}`} className="relative">
-                      <div
-                        className="absolute right-0 top-0 bottom-0 bg-[#f85149]/20"
-                        style={{ width: `${(displayLiquidity / maxCumLiquidity) * 100}%` }}
-                      />
-                      <div className="relative grid grid-cols-3 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5">
-                        <span className="text-[#f85149]">${formatPrice(priceInUsd)}</span>
-                        <span className={`text-center ${baseHighlight}`}>{formatNumber(displayBase)}</span>
-                        <span className={`text-right ${quoteHighlight}`}>${formatNumber(displayUsd)}</span>
-                      </div>
-                    </div>
-                  );
-                });
+                return (
+                  <div className="space-y-0.5">
+                    {asksWithCumulative.reverse().map((level, i) => {
+                      const displayBase = viewMode === 'cumulative' ? level.cumBaseAmount : level.baseAmount;
+                      const displayQuote = viewMode === 'cumulative' ? level.cumQuoteAmount : level.quoteAmount;
+                      const displayUsd = viewMode === 'cumulative' ? level.cumLiquidityUSD : level.liquidityUSD;
+                      const priceInUsd = level.price; // Already in USD from API (calculated using priceUsd param)
+                      const displayLiquidity = viewMode === 'cumulative' ? level.cumLiquidityUSD : level.liquidityUSD;
+                      const baseHighlight = getHighlightClass('ask', level.price, 'base');
+                      const quoteHighlight = getHighlightClass('ask', level.price, 'quote');
+                      return (
+                        <div key={`ask-${i}`} className="relative">
+                          <div
+                            className="absolute right-0 top-0 bottom-0 bg-[#f85149]/20"
+                            style={{ width: `${(displayLiquidity / maxCumLiquidity) * 100}%` }}
+                          />
+                          <div className="relative grid grid-cols-3 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5">
+                            <span className="text-[#f85149]">${formatPrice(priceInUsd)}</span>
+                            <span className={`text-center ${baseHighlight}`}>{formatNumber(displayBase)}</span>
+                            <span className={`text-right ${quoteHighlight}`}>${formatNumber(displayUsd)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
               })()
             )}
           </div>
