@@ -424,7 +424,7 @@ export default function TradePanel({
     <div className="bg-[#161b22] rounded-lg border border-[#30363d] overflow-hidden relative">
       {/* Header: Swap label + refresh */}
       <div className="px-3 py-2 border-b border-[#30363d] flex items-center justify-between">
-        <span className="text-sm font-medium">Swap</span>
+        <span className="text-base font-medium">Swap</span>
         <div className="flex items-center gap-2 text-gray-400">
           <button
             onClick={fetchQuote}
@@ -432,7 +432,7 @@ export default function TradePanel({
             title="Refresh quote"
             disabled={isLoadingQuote}
           >
-            <svg className={`w-4 h-4 ${isLoadingQuote ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={`w-5 h-5 ${isLoadingQuote ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
@@ -443,7 +443,7 @@ export default function TradePanel({
       <div className="flex border-b border-[#30363d]">
         <button
           onClick={() => { setTradeType('buy'); setQuote(null); setTradeStatus('idle'); }}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 text-base font-medium transition-colors ${
             tradeType === 'buy'
               ? 'bg-[#3fb950]/10 text-[#3fb950] border-b-2 border-[#3fb950]'
               : 'text-gray-400 hover:text-white'
@@ -453,7 +453,7 @@ export default function TradePanel({
         </button>
         <button
           onClick={() => { setTradeType('sell'); setQuote(null); setTradeStatus('idle'); }}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 text-base font-medium transition-colors ${
             tradeType === 'sell'
               ? 'bg-[#f85149]/10 text-[#f85149] border-b-2 border-[#f85149]'
               : 'text-gray-400 hover:text-white'
@@ -467,12 +467,12 @@ export default function TradePanel({
         {/* Pending Message - Order submitted, waiting for fill */}
         {tradeStatus === 'pending' && orderId && (
           <div className="bg-[#58a6ff]/10 border border-[#58a6ff]/30 rounded p-3">
-            <div className="text-[#58a6ff] text-sm font-medium mb-2 text-center flex items-center justify-center gap-2">
+            <div className="text-[#58a6ff] text-base font-medium mb-2 text-center flex items-center justify-center gap-2">
               <div className="w-4 h-4 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
               Waiting for execution...
             </div>
             {tradeDetails && (
-              <div className="text-xs space-y-1 mb-2">
+              <div className="text-sm space-y-1 mb-2">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Sell</span>
                   <span className="text-white">{formatNumber(parseFloat(tradeDetails.sellAmount))} {tradeDetails.sellSymbol}</span>
@@ -483,14 +483,14 @@ export default function TradePanel({
                 </div>
               </div>
             )}
-            <div className="text-[10px] text-gray-500 text-center mb-2">
+            <div className="text-xs text-gray-500 text-center mb-2">
               Market order typically fills within 30s
             </div>
             <a
               href={getOrderExplorerUrl(targetChainId, orderId)}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-xs text-[#58a6ff] hover:underline text-center"
+              className="block text-sm text-[#58a6ff] hover:underline text-center"
             >
               Track order on CoW Explorer →
             </a>
@@ -500,9 +500,9 @@ export default function TradePanel({
         {/* Filled Message - Order successfully executed */}
         {tradeStatus === 'filled' && orderId && (
           <div className="bg-[#3fb950]/10 border border-[#3fb950]/30 rounded p-3">
-            <div className="text-[#3fb950] text-sm font-medium mb-2 text-center">Trade Executed!</div>
+            <div className="text-[#3fb950] text-base font-medium mb-2 text-center">Trade Executed!</div>
             {tradeDetails && (
-              <div className="text-xs space-y-1 mb-2">
+              <div className="text-sm space-y-1 mb-2">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Sold</span>
                   <span className="text-white">{formatNumber(parseFloat(tradeDetails.sellAmount))} {tradeDetails.sellSymbol}</span>
@@ -517,7 +517,7 @@ export default function TradePanel({
               href={getOrderExplorerUrl(targetChainId, orderId)}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-xs text-[#58a6ff] hover:underline text-center"
+              className="block text-sm text-[#58a6ff] hover:underline text-center"
             >
               View on CoW Explorer →
             </a>
@@ -532,7 +532,7 @@ export default function TradePanel({
         )}
 
         {/* Market Order Label */}
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-sm">
           <span className="px-2 py-1 bg-[#30363d] rounded text-white">Market</span>
           <span className="text-gray-500">
             {isLoadingQuote ? 'Fetching price...' : 'Best available price'}
@@ -540,12 +540,12 @@ export default function TradePanel({
         </div>
 
         {/* Amount Input - Pay */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-gray-400">
+            <label className="text-sm text-gray-400">
               {tradeType === 'buy' ? `Pay` : `Sell`}
             </label>
-            <div className="flex items-center gap-1 text-xs">
+            <div className="flex items-center gap-1 text-sm">
               <span className="text-gray-500">Balance:</span>
               <span className={tradeType === 'buy' ? 'text-[#3fb950]' : 'text-[#f85149]'}>
                 {isConnected ? formatBalance(availableBalance) : '--'}
@@ -561,7 +561,7 @@ export default function TradePanel({
               setQuote(null);
               setTradeStatus('idle');
             }}
-            className="w-full bg-[#21262d] border border-[#30363d] rounded px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-[#58a6ff] focus:outline-none"
+            className="w-full bg-[#21262d] border border-[#30363d] rounded px-3 py-3 text-base text-white placeholder-gray-500 focus:border-[#58a6ff] focus:outline-none"
             placeholder="0.00"
             disabled={isTrading}
           />
@@ -575,10 +575,10 @@ export default function TradePanel({
             max="100"
             value={sliderValue}
             onChange={(e) => handleSliderChange(parseInt(e.target.value))}
-            className="w-full h-1 bg-[#21262d] rounded-lg appearance-none cursor-pointer slider-thumb"
+            className="w-full h-1.5 bg-[#21262d] rounded-lg appearance-none cursor-pointer slider-thumb"
             disabled={!isConnected || isTrading}
           />
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-sm text-gray-400">
             {[0, 25, 50, 75, 100].map((percent) => (
               <button
                 key={percent}
@@ -595,10 +595,10 @@ export default function TradePanel({
         </div>
 
         {/* Estimated Output - Receive */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-gray-400">Receive</label>
-            <div className="flex items-center gap-1 text-xs">
+            <label className="text-sm text-gray-400">Receive</label>
+            <div className="flex items-center gap-1 text-sm">
               <span className="text-gray-500">Balance:</span>
               <span className="text-white">
                 {isConnected ? formatBalance(outputBalance) : '--'}
@@ -611,12 +611,12 @@ export default function TradePanel({
               type="text"
               value={estimatedOutput > 0 ? `~${formatNumber(estimatedOutput)}` : ''}
               readOnly
-              className="w-full bg-[#21262d] border border-[#30363d] rounded px-3 py-2.5 text-sm text-gray-400 placeholder-gray-500"
+              className="w-full bg-[#21262d] border border-[#30363d] rounded px-3 py-3 text-base text-gray-400 placeholder-gray-500"
               placeholder="0.00"
             />
             {isLoadingQuote && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
               </div>
             )}
           </div>
@@ -624,14 +624,14 @@ export default function TradePanel({
 
         {/* Quote Error */}
         {quoteError && (
-          <div className="text-xs text-[#f85149] text-center py-1">
+          <div className="text-sm text-[#f85149] text-center py-1">
             {quoteError}
           </div>
         )}
 
         {/* Price Impact / Rate */}
         {quote && !isLoadingQuote && (
-          <div className="text-xs text-gray-400 bg-[#21262d] rounded px-3 py-2 space-y-1">
+          <div className="text-sm text-gray-400 bg-[#21262d] rounded px-3 py-2 space-y-1">
             <div className="flex justify-between">
               <span>Rate</span>
               <span className="text-white">
@@ -650,26 +650,26 @@ export default function TradePanel({
           <button
             onClick={handleConnect}
             disabled={isConnecting}
-            className="w-full py-3 bg-[#58a6ff] hover:bg-[#58a6ff]/80 disabled:opacity-50 text-white font-medium rounded transition-colors"
+            className="w-full py-3.5 bg-[#58a6ff] hover:bg-[#58a6ff]/80 disabled:opacity-50 text-white text-base font-medium rounded transition-colors"
           >
             {isConnecting ? 'Connecting...' : 'Connect Wallet'}
           </button>
         ) : !isCorrectChain ? (
           <button
             onClick={handleSwitchChain}
-            className="w-full py-3 bg-yellow-600 hover:bg-yellow-600/80 text-white font-medium rounded transition-colors"
+            className="w-full py-3.5 bg-yellow-600 hover:bg-yellow-600/80 text-white text-base font-medium rounded transition-colors"
           >
             Switch to {chainId.charAt(0).toUpperCase() + chainId.slice(1)}
           </button>
         ) : !isSupportedChain ? (
-          <div className="text-center text-yellow-500 text-sm py-3">
+          <div className="text-center text-yellow-500 text-base py-3">
             Trading not available on this chain
           </div>
         ) : needsApproval ? (
           <button
             onClick={handleApprove}
             disabled={isApproving || !quote}
-            className="w-full py-3 bg-[#58a6ff] hover:bg-[#58a6ff]/80 disabled:opacity-50 text-white font-medium rounded transition-colors"
+            className="w-full py-3.5 bg-[#58a6ff] hover:bg-[#58a6ff]/80 disabled:opacity-50 text-white text-base font-medium rounded transition-colors"
           >
             {isApproving ? 'Approving...' : `Approve ${tradeType === 'buy' ? quoteSymbol : baseSymbol}`}
           </button>
@@ -677,7 +677,7 @@ export default function TradePanel({
           <button
             onClick={handleTrade}
             disabled={!amount || parseFloat(amount) <= 0 || isLoadingQuote || isTrading || !quote}
-            className={`w-full py-3 font-medium rounded transition-colors disabled:opacity-50 ${
+            className={`w-full py-3.5 text-base font-medium rounded transition-colors disabled:opacity-50 ${
               tradeType === 'buy'
                 ? 'bg-[#3fb950] hover:bg-[#3fb950]/80 text-white'
                 : 'bg-[#f85149] hover:bg-[#f85149]/80 text-white'
@@ -702,7 +702,7 @@ export default function TradePanel({
 
       {/* Wallets Section */}
       {isConnected && (
-        <div className="px-3 py-2 border-t border-[#30363d] flex items-center justify-between text-xs">
+        <div className="px-3 py-2 border-t border-[#30363d] flex items-center justify-between text-sm">
           <span className="text-gray-400">Wallet</span>
           <div className="flex items-center gap-2">
             <span className="text-[#58a6ff]">
@@ -713,7 +713,7 @@ export default function TradePanel({
               className="text-gray-400 hover:text-[#f85149] transition-colors"
               title="Disconnect"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>

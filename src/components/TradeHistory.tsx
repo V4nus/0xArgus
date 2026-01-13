@@ -167,8 +167,8 @@ export default function TradeHistory({
       {/* Header */}
       <div className="px-3 py-2 border-b border-[#30363d] flex-shrink-0">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Trade History</span>
-          <span className="text-xs text-gray-400">{trades.length} trades</span>
+          <span className="text-base font-medium">Trade History</span>
+          <span className="text-sm text-gray-400">{trades.length} trades</span>
         </div>
         {/* Buy/Sell summary bar */}
         <div className="mt-2 flex items-center gap-2">
@@ -186,7 +186,7 @@ export default function TradeHistory({
               }}
             />
           </div>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-sm">
             <span className="text-[#3fb950]">{buyCount}B</span>
             <span className="text-gray-500">/</span>
             <span className="text-[#f85149]">{sellCount}S</span>
@@ -196,14 +196,14 @@ export default function TradeHistory({
 
       {/* Trades table - fills remaining space */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <table className="w-full text-xs">
+        <table className="w-full text-sm">
           <thead className="text-gray-400 sticky top-0 bg-[#161b22]">
             <tr className="border-b border-[#21262d]">
-              <th className="text-left px-1.5 sm:px-2 py-1.5 font-normal">Price</th>
-              <th className="text-right px-1.5 sm:px-2 py-1.5 font-normal hidden sm:table-cell">{baseSymbol}</th>
-              <th className="text-right px-1.5 sm:px-2 py-1.5 font-normal">USD</th>
-              <th className="text-right px-1.5 sm:px-2 py-1.5 font-normal">Time</th>
-              <th className="text-right px-1.5 sm:px-2 py-1.5 font-normal hidden sm:table-cell">Tx</th>
+              <th className="text-left px-2 py-2 font-normal">Price</th>
+              <th className="text-right px-2 py-2 font-normal hidden sm:table-cell">{baseSymbol}</th>
+              <th className="text-right px-2 py-2 font-normal">USD</th>
+              <th className="text-right px-2 py-2 font-normal">Time</th>
+              <th className="text-right px-2 py-2 font-normal hidden sm:table-cell">Tx</th>
             </tr>
           </thead>
           <tbody>
@@ -223,24 +223,24 @@ export default function TradeHistory({
                       isNew ? (isBuy ? 'animate-flash-green' : 'animate-flash-red') : ''
                     }`}
                   >
-                    <td className={`px-1.5 sm:px-2 py-1 whitespace-nowrap text-[10px] sm:text-xs ${isBuy ? 'text-[#3fb950]' : 'text-[#f85149]'}`}>
+                    <td className={`px-2 py-1.5 whitespace-nowrap text-xs sm:text-sm ${isBuy ? 'text-[#3fb950]' : 'text-[#f85149]'}`}>
                       ${formatPrice(trade.price)}
                     </td>
-                    <td className="text-right px-1.5 sm:px-2 py-1 text-gray-300 whitespace-nowrap text-[10px] sm:text-xs hidden sm:table-cell">
+                    <td className="text-right px-2 py-1.5 text-gray-300 whitespace-nowrap text-xs sm:text-sm hidden sm:table-cell">
                       {formatNumber(trade.amount)}
                     </td>
-                    <td className="text-right px-1.5 sm:px-2 py-1 text-gray-300 whitespace-nowrap text-[10px] sm:text-xs">
+                    <td className="text-right px-2 py-1.5 text-gray-300 whitespace-nowrap text-xs sm:text-sm">
                       ${trade.volumeUsd >= 1000 ? formatNumber(trade.volumeUsd) : trade.volumeUsd.toFixed(0)}
                     </td>
-                    <td className="text-right px-1.5 sm:px-2 py-1 text-gray-400 whitespace-nowrap text-[10px] sm:text-xs">
+                    <td className="text-right px-2 py-1.5 text-gray-400 whitespace-nowrap text-xs sm:text-sm">
                       {formatTime(trade.timestamp)}
                     </td>
-                    <td className="text-right px-1.5 sm:px-2 py-1 whitespace-nowrap hidden sm:table-cell">
+                    <td className="text-right px-2 py-1.5 whitespace-nowrap hidden sm:table-cell">
                       <a
                         href={getExplorerUrl(chainId, trade.txHash)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#58a6ff] hover:text-[#79c0ff] hover:underline"
+                        className="text-[#58a6ff] hover:text-[#79c0ff] hover:underline text-sm"
                         title={trade.txHash}
                       >
                         tx
@@ -255,7 +255,7 @@ export default function TradeHistory({
       </div>
 
       {/* Volume summary */}
-      <div className="px-3 py-2 border-t border-[#30363d] text-xs flex-shrink-0">
+      <div className="px-3 py-2 border-t border-[#30363d] text-sm flex-shrink-0">
         <div className="flex justify-between text-gray-400">
           <span>Recent Volume</span>
           <span>${formatNumber(buyVolume + sellVolume)}</span>
