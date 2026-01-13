@@ -58,6 +58,12 @@ export default function TradePanel({
   const [orderId, setOrderId] = useState<string | null>(null);
   const [tradeError, setTradeError] = useState<string | null>(null);
   const [showFireEffect, setShowFireEffect] = useState(false);
+  const [tradeDetails, setTradeDetails] = useState<{
+    sellAmount: string;
+    buyAmount: string;
+    sellSymbol: string;
+    buySymbol: string;
+  } | null>(null);
 
   const { address, isConnected } = useAccount();
   const { connect, isPending: isConnecting } = useConnect();
@@ -336,6 +342,16 @@ export default function TradePanel({
       setOrderId(newOrderId);
       setTradeStatus('success');
 
+      // Save trade details for display
+      const sellAmountFormatted = formatUnits(BigInt(quote.sellAmount), inputDecimals);
+      const buyAmountFormatted = formatUnits(BigInt(quote.buyAmount), outputDecimals);
+      setTradeDetails({
+        sellAmount: sellAmountFormatted,
+        buyAmount: buyAmountFormatted,
+        sellSymbol: tradeType === 'buy' ? quoteSymbol : baseSymbol,
+        buySymbol: tradeType === 'buy' ? baseSymbol : quoteSymbol,
+      });
+
       // Trigger fire effect animation
       setShowFireEffect(true);
       setTimeout(() => setShowFireEffect(false), 1500);
@@ -346,6 +362,7 @@ export default function TradePanel({
         setSliderValue(0);
         setQuote(null);
         setTradeStatus('idle');
+        setTradeDetails(null);
       }, 5000);
 
     } catch (error: unknown) {
@@ -512,15 +529,30 @@ export default function TradePanel({
       <div className="p-3 space-y-3">
         {/* Success Message */}
         {tradeStatus === 'success' && orderId && (
-          <div className="bg-[#3fb950]/10 border border-[#3fb950]/30 rounded p-3 text-center">
-            <div className="text-[#3fb950] text-sm font-medium mb-1">Order Submitted!</div>
+          <div className="bg-[#3fb950]/10 border border-[#3fb950]/30 rounded p-3">
+            <div className="text-[#3fb950] text-sm font-medium mb-2 text-center">Order Placed!</div>
+            {tradeDetails && (
+              <div className="text-xs space-y-1 mb-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Sell</span>
+                  <span className="text-white">{formatNumber(parseFloat(tradeDetails.sellAmount))} {tradeDetails.sellSymbol}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Buy</span>
+                  <span className="text-[#3fb950]">~{formatNumber(parseFloat(tradeDetails.buyAmount))} {tradeDetails.buySymbol}</span>
+                </div>
+              </div>
+            )}
+            <div className="text-[10px] text-gray-500 text-center mb-2">
+              Order waiting to be filled by CoW solvers
+            </div>
             <a
               href={getOrderExplorerUrl(targetChainId, orderId)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-[#58a6ff] hover:underline"
+              className="block text-xs text-[#58a6ff] hover:underline text-center"
             >
-              View on CoW Explorer →
+              Track order on CoW Explorer →
             </a>
           </div>
         )}
