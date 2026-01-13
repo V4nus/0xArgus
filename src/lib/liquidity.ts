@@ -483,7 +483,7 @@ export async function getV4LiquidityDepth(
       return null;
     }
 
-    const [sqrtPriceX96] = slot0Result as [bigint, number, number, number];
+    const [sqrtPriceX96] = slot0Result as unknown as [bigint, number, number, number];
 
     // In Uniswap V3/V4, token0 is always the token with the lower address
     // DexScreener passes baseToken and quoteToken which may be in different order
@@ -702,7 +702,7 @@ export async function getLiquidityDepth(
       }),
     ]);
 
-    const [sqrtPriceX96, currentTick] = slot0 as [bigint, number, ...unknown[]];
+    const [sqrtPriceX96, currentTick] = slot0 as unknown as [bigint, number, ...unknown[]];
 
     // Get token info
     const [decimals0, decimals1, symbol0, symbol1] = await Promise.all([

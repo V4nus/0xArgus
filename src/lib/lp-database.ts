@@ -84,8 +84,9 @@ const V3_MINT_SIGNATURE = '0x7a53080ba414158be7ec69b987b5fb7d07dee101fe85488f085
 const V3_BURN_SIGNATURE = '0x0c396cd989a39f4459b5fa1aed6a9a8dcdbc45908acfd67e028cd568da98982c';
 
 // Chain configuration
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CHAIN_CONFIG: Record<string, {
-  chain: typeof base;
+  chain: any;
   rpcUrl: string;
   blockRange: number;
   v4PoolManager?: string;
@@ -248,14 +249,14 @@ async function findPoolCreationBlock(
     try {
       let logs;
       if (isV4 && config.v4PoolManager) {
-        logs = await client.getLogs({
+        logs = await (client as any).getLogs({
           address: config.v4PoolManager as `0x${string}`,
           topics: [V4_MODIFY_LIQUIDITY_SIGNATURE, poolAddress.toLowerCase() as `0x${string}`],
           fromBlock: BigInt(rangeStart),
           toBlock: BigInt(Math.min(rangeStart + config.blockRange, rangeEnd)),
         });
       } else {
-        logs = await client.getLogs({
+        logs = await (client as any).getLogs({
           address: poolAddress as `0x${string}`,
           topics: [V3_MINT_SIGNATURE],
           fromBlock: BigInt(rangeStart),
@@ -334,7 +335,7 @@ export async function syncPositions(
         let logs;
         if (isV4 && config.v4PoolManager) {
           // Query V4 ModifyLiquidity events
-          logs = await client.getLogs({
+          logs = await (client as any).getLogs({
             address: config.v4PoolManager as `0x${string}`,
             topics: [V4_MODIFY_LIQUIDITY_SIGNATURE, poolAddress.toLowerCase() as `0x${string}`],
             fromBlock: BigInt(fromBlock),
@@ -384,7 +385,7 @@ export async function syncPositions(
           }
         } else {
           // Query V3 Mint events
-          const mintLogs = await client.getLogs({
+          const mintLogs = await (client as any).getLogs({
             address: poolAddress as `0x${string}`,
             topics: [V3_MINT_SIGNATURE],
             fromBlock: BigInt(fromBlock),
@@ -392,7 +393,7 @@ export async function syncPositions(
           });
 
           // Query V3 Burn events
-          const burnLogs = await client.getLogs({
+          const burnLogs = await (client as any).getLogs({
             address: poolAddress as `0x${string}`,
             topics: [V3_BURN_SIGNATURE],
             fromBlock: BigInt(fromBlock),

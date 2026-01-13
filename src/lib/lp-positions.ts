@@ -42,7 +42,7 @@ export interface PositionCache {
 
 // Chain configuration with V4 PoolManager addresses
 const CHAIN_CONFIG: Record<string, {
-  chain: typeof base;
+  chain: any;
   rpcUrl?: string;
   blockRange: number;
   v4PoolManager?: string;
@@ -143,7 +143,7 @@ async function queryV3Positions(
 
     try {
       // Query Mint events
-      const mintLogs = await client.getLogs({
+      const mintLogs = await (client as any).getLogs({
         address: poolAddress as `0x${string}`,
         event: V3_MINT_EVENT,
         fromBlock: BigInt(from),
@@ -151,7 +151,7 @@ async function queryV3Positions(
       });
 
       // Query Burn events
-      const burnLogs = await client.getLogs({
+      const burnLogs = await (client as any).getLogs({
         address: poolAddress as `0x${string}`,
         event: V3_BURN_EVENT,
         fromBlock: BigInt(from),
@@ -269,7 +269,7 @@ async function queryV4Positions(
       // keccak256("ModifyLiquidity(bytes32,address,int24,int24,int256,bytes32)")
       const eventSignature = '0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec';
 
-      const logs = await client.getLogs({
+      const logs = await (client as any).getLogs({
         address: poolManagerAddress as `0x${string}`,
         topics: [
           eventSignature,
@@ -403,9 +403,9 @@ export async function queryLPPositions(
       console.log(`No V4 PoolManager configured for ${chainId}`);
       return [];
     }
-    return queryV4Positions(client, poolAddress, config.v4PoolManager, startBlock, currentBlock, config.blockRange);
+    return queryV4Positions(client as any, poolAddress, config.v4PoolManager, startBlock, currentBlock, config.blockRange);
   } else {
-    return queryV3Positions(client, poolAddress, startBlock, currentBlock, config.blockRange);
+    return queryV3Positions(client as any, poolAddress, startBlock, currentBlock, config.blockRange);
   }
 }
 
