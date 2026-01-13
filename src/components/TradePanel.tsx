@@ -530,7 +530,7 @@ export default function TradePanel({
         {/* Success Message */}
         {tradeStatus === 'success' && orderId && (
           <div className="bg-[#3fb950]/10 border border-[#3fb950]/30 rounded p-3">
-            <div className="text-[#3fb950] text-sm font-medium mb-2 text-center">Order Placed!</div>
+            <div className="text-[#3fb950] text-sm font-medium mb-2 text-center">Swap Submitted!</div>
             {tradeDetails && (
               <div className="text-xs space-y-1 mb-2">
                 <div className="flex justify-between">
@@ -544,7 +544,7 @@ export default function TradePanel({
               </div>
             )}
             <div className="text-[10px] text-gray-500 text-center mb-2">
-              Order waiting to be filled by CoW solvers
+              Market order submitted - typically fills within 30s
             </div>
             <a
               href={getOrderExplorerUrl(targetChainId, orderId)}
