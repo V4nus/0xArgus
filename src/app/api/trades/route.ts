@@ -83,19 +83,9 @@ export async function GET(request: NextRequest) {
   try {
     const network = NETWORK_MAP[chainId] || chainId;
 
-    // For V4 pools (66 char poolId), use database cache
-    if (poolAddress.length === 66) {
-      const v4Trades = await getV4TradesWithCache(chainId, poolAddress, limit);
-      return NextResponse.json({
-        success: true,
-        data: v4Trades,
-      });
-    }
-
-    const actualPoolAddress = poolAddress;
-
+    // Always try GeckoTerminal first (works for both V3 and V4 pools)
     const response = await fetch(
-      `https://api.geckoterminal.com/api/v2/networks/${network}/pools/${actualPoolAddress}/trades?trade_volume_in_usd_greater_than=0`,
+      `https://api.geckoterminal.com/api/v2/networks/${network}/pools/${poolAddress}/trades?trade_volume_in_usd_greater_than=0`,
       {
         headers: {
           'Accept': 'application/json',
@@ -104,48 +94,53 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    if (!response.ok) {
-      console.error(`GeckoTerminal API error: ${response.status}`);
-      return NextResponse.json({
-        success: false,
-        error: `API returned ${response.status}`,
-      });
+    if (response.ok) {
+      const result = await response.json();
+
+      if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+        // Transform to our format
+        const trades: Trade[] = result.data.slice(0, limit).map((trade: GeckoTrade) => {
+          const attrs = trade.attributes;
+          const isBuy = attrs.kind === 'buy';
+
+          // For buy: from=quote(WETH), to=base(DRB) -> use price_to (base token price)
+          // For sell: from=base(DRB), to=quote(WETH) -> use price_from (base token price)
+          const baseTokenPrice = isBuy
+            ? parseFloat(attrs.price_to_in_usd) || 0
+            : parseFloat(attrs.price_from_in_usd) || 0;
+
+          return {
+            txHash: attrs.tx_hash,
+            type: isBuy ? 'buy' : 'sell',
+            price: baseTokenPrice,
+            amount: parseFloat(isBuy ? attrs.to_token_amount : attrs.from_token_amount) || 0,
+            volumeUsd: parseFloat(attrs.volume_in_usd) || 0,
+            timestamp: attrs.block_timestamp,
+            blockNumber: attrs.block_number,
+          };
+        });
+
+        return NextResponse.json({
+          success: true,
+          data: trades,
+        });
+      }
     }
 
-    const result = await response.json();
-
-    if (!result.data || !Array.isArray(result.data)) {
+    // Fallback: For V4 pools (66 char poolId), try database cache if GeckoTerminal has no data
+    if (poolAddress.length === 66) {
+      console.log('GeckoTerminal returned no data for V4 pool, trying chain query...');
+      const v4Trades = await getV4TradesWithCache(chainId, poolAddress, limit);
       return NextResponse.json({
         success: true,
-        data: [],
+        data: v4Trades,
       });
     }
 
-    // Transform to our format
-    const trades: Trade[] = result.data.slice(0, limit).map((trade: GeckoTrade) => {
-      const attrs = trade.attributes;
-      const isBuy = attrs.kind === 'buy';
-
-      // For buy: from=quote(WETH), to=base(DRB) -> use price_to (base token price)
-      // For sell: from=base(DRB), to=quote(WETH) -> use price_from (base token price)
-      const baseTokenPrice = isBuy
-        ? parseFloat(attrs.price_to_in_usd) || 0
-        : parseFloat(attrs.price_from_in_usd) || 0;
-
-      return {
-        txHash: attrs.tx_hash,
-        type: isBuy ? 'buy' : 'sell',
-        price: baseTokenPrice,
-        amount: parseFloat(isBuy ? attrs.to_token_amount : attrs.from_token_amount) || 0,
-        volumeUsd: parseFloat(attrs.volume_in_usd) || 0,
-        timestamp: attrs.block_timestamp,
-        blockNumber: attrs.block_number,
-      };
-    });
-
+    // No data from GeckoTerminal and not a V4 pool
     return NextResponse.json({
       success: true,
-      data: trades,
+      data: [],
     });
   } catch (error) {
     console.error('Trades API error:', error);
