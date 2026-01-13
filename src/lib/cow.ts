@@ -273,6 +273,10 @@ export async function submitOrder(params: {
 
   const orderBookApi = getOrderBookApi(chainId);
 
+  // CoW Protocol on some chains (like Base) requires feeAmount to be 0
+  // The fee is taken from the sell amount instead
+  const feeAmount = '0';
+
   console.log('Submitting order to CoW Protocol:', {
     chainId,
     sellToken: order.sellToken,
@@ -280,6 +284,7 @@ export async function submitOrder(params: {
     sellAmount: order.sellAmount,
     buyAmount: order.buyAmount,
     validTo: order.validTo,
+    feeAmount,
     from,
     signatureLength: signature.length,
   });
@@ -292,7 +297,7 @@ export async function submitOrder(params: {
       buyAmount: order.buyAmount,
       validTo: order.validTo,
       appData: order.appData,
-      feeAmount: order.feeAmount,
+      feeAmount: feeAmount,
       kind: order.kind as OrderKind,
       partiallyFillable: order.partiallyFillable,
       receiver: order.receiver,

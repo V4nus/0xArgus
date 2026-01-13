@@ -281,6 +281,7 @@ export default function TradePanel({
 
     try {
       // Create order data
+      // CoW Protocol requires feeAmount to be 0 (fee is included in the sell amount)
       const orderData = createOrderData({
         sellToken: quote.sellToken,
         buyToken: quote.buyToken,
@@ -288,7 +289,7 @@ export default function TradePanel({
         buyAmount: quote.buyAmount,
         validTo: quote.validTo,
         receiver: address,
-        feeAmount: quote.feeAmount,
+        feeAmount: '0',
         kind: 'sell',
       });
 
