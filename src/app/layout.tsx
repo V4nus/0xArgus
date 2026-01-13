@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WalletProvider } from "@/components/WalletProvider";
 
 export const metadata: Metadata = {
   title: "0xArgus - Decode AMM Liquidity Into Order Flow",
@@ -25,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased font-sans">
-        {children}
+        <WalletProvider>
+          {children}
+        </WalletProvider>
       </body>
     </html>
   );

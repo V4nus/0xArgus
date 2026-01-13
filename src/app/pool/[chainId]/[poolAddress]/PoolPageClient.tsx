@@ -42,6 +42,15 @@ const TradeHistory = dynamic(() => import('@/components/TradeHistory'), {
   ),
 });
 
+const TradePanel = dynamic(() => import('@/components/TradePanel'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-[#161b22] rounded-lg border border-[#30363d] p-3">
+      <div className="text-center text-gray-400 animate-pulse">Loading...</div>
+    </div>
+  ),
+});
+
 interface PoolPageClientProps {
   pool: PoolInfo;
 }
@@ -219,10 +228,10 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
           </div>
         </div>
 
-        {/* Right: Order Book only - sticky on desktop */}
-        <div className="flex-shrink-0 md:sticky md:top-0 md:self-start md:h-[calc(100vh-140px)]">
+        {/* Right: Order Book + Trade Panel - sticky on desktop */}
+        <div className="flex-shrink-0 md:sticky md:top-0 md:self-start w-full sm:w-64 md:w-72 flex flex-col gap-2 md:h-[calc(100vh-140px)]">
           {/* Order Book */}
-          <div className="w-full sm:w-64 md:w-72 h-[300px] sm:h-[400px] md:h-full">
+          <div className="h-[300px] sm:h-[400px] md:flex-1 md:min-h-0">
             <LiquidityDepth
               chainId={pool.chainId}
               poolAddress={pool.poolAddress}
@@ -234,6 +243,17 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
               liquidityQuote={pool.liquidityQuote}
               baseTokenAddress={pool.baseToken.address}
               quoteTokenAddress={pool.quoteToken.address}
+            />
+          </div>
+
+          {/* Trade Panel */}
+          <div className="flex-shrink-0">
+            <TradePanel
+              chainId={pool.chainId}
+              baseTokenAddress={pool.baseToken.address}
+              quoteTokenAddress={pool.quoteToken.address}
+              baseSymbol={pool.baseToken.symbol}
+              quoteSymbol={pool.quoteToken.symbol}
             />
           </div>
         </div>
