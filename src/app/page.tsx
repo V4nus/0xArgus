@@ -27,7 +27,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <span className="text-2xl font-bold text-[#3fb950] glow-green">FlowLens</span>
+              <span className="text-2xl font-bold text-[#3fb950] glow-green">0xArgus</span>
               <span className="absolute -top-1 -right-8 text-[10px] px-1.5 py-0.5 bg-[#3fb950] text-black rounded font-bold animate-pulse">LIVE</span>
             </div>
           </div>
