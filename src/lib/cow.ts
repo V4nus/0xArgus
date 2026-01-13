@@ -1,7 +1,8 @@
 'use client';
 
 import { OrderBookApi, OrderQuoteRequest, OrderQuoteSideKindSell, OrderQuoteSideKindBuy, SigningScheme, OrderKind, SellTokenSource, BuyTokenDestination } from '@cowprotocol/cow-sdk';
-import { buildAppData } from '@cowprotocol/sdk-trading';
+import { MetadataApi, stringifyDeterministic } from '@cowprotocol/sdk-app-data';
+import { keccak256, stringToHex } from 'viem';
 
 // CoW Protocol supported chains
 export const COW_SUPPORTED_CHAINS: Record<number, string> = {
@@ -228,14 +229,26 @@ export const DEFAULT_APP_DATA = '0x000000000000000000000000000000000000000000000
 // Build market order appData with orderClass: "market"
 export async function buildMarketOrderAppData(slippageBps: number = 50): Promise<{ appDataHash: string; fullAppData: string }> {
   try {
-    const appDataInfo = await buildAppData({
-      slippageBps,
+    const metadataApi = new MetadataApi();
+
+    // Generate appData document with market orderClass
+    const appDataDoc = await metadataApi.generateAppDataDoc({
       appCode: '0xArgus',
-      orderClass: 'market',
+      metadata: {
+        orderClass: { orderClass: 'market' },
+        quote: { slippageBips: slippageBps }
+      }
     });
+
+    // Stringify deterministically and compute keccak256 hash
+    const fullAppData = await stringifyDeterministic(appDataDoc);
+    const appDataHash = keccak256(stringToHex(fullAppData));
+
+    console.log('Built market order appData:', { appDataHash, fullAppData });
+
     return {
-      appDataHash: appDataInfo.appDataKeccak256,
-      fullAppData: appDataInfo.fullAppData,
+      appDataHash,
+      fullAppData,
     };
   } catch (error) {
     console.error('Failed to build appData:', error);
