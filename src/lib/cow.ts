@@ -101,6 +101,8 @@ export async function getQuote(params: QuoteParams): Promise<QuoteResult> {
   const normalizedSellToken = normalizeToken(sellToken, chainId);
   const normalizedBuyToken = normalizeToken(buyToken, chainId);
 
+  // For sell orders, we want to sell EXACTLY the amount user specified
+  // So we use sellAmountAfterFee instead of sellAmountBeforeFee
   const quoteRequest: OrderQuoteRequest = {
     sellToken: normalizedSellToken,
     buyToken: normalizedBuyToken,
@@ -108,7 +110,7 @@ export async function getQuote(params: QuoteParams): Promise<QuoteResult> {
     receiver: userAddress,
     signingScheme: SigningScheme.EIP712,
     ...(kind === 'sell'
-      ? { kind: OrderQuoteSideKindSell.SELL, sellAmountBeforeFee: amount }
+      ? { kind: OrderQuoteSideKindSell.SELL, sellAmountAfterFee: amount }
       : { kind: OrderQuoteSideKindBuy.BUY, buyAmountAfterFee: amount }
     ),
   };
