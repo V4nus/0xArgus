@@ -291,12 +291,15 @@ export default function TradePanel({
     try {
       // Create market order data with proper appData (orderClass: "market")
       // CoW Protocol requires feeAmount to be 0 (fee is included in the sell amount)
+      // Set validTo to 60 seconds from now - order auto-expires, no manual cancellation needed
+      const validTo = Math.floor(Date.now() / 1000) + 60;
+
       const { order: orderData, fullAppData } = await createOrderData({
         sellToken: quote.sellToken,
         buyToken: quote.buyToken,
         sellAmount: quote.sellAmount,
         buyAmount: quote.buyAmount,
-        validTo: quote.validTo,
+        validTo,
         receiver: address,
         feeAmount: '0',
         kind: 'sell',
@@ -357,9 +360,9 @@ export default function TradePanel({
         buySymbol: tradeType === 'buy' ? baseSymbol : quoteSymbol,
       });
 
-      // Poll for order execution (wait up to 120s)
+      // Poll for order execution (wait up to 65s - slightly longer than validTo to catch expiry)
       const { filled, status } = await waitForOrderFill(targetChainId, newOrderId, {
-        maxWaitMs: 120000,
+        maxWaitMs: 65000,
         pollIntervalMs: 2000,
         onStatusChange: (newStatus) => {
           console.log('Order status changed:', newStatus);
@@ -382,7 +385,14 @@ export default function TradePanel({
       } else {
         // Order not filled (cancelled, expired, or timeout)
         console.log('Order not filled, status:', status);
-        // Keep showing pending state with link to explorer
+        setTradeStatus('error');
+        if (status === 'expired') {
+          setTradeError('Order expired (60s timeout)');
+        } else if (status === 'cancelled') {
+          setTradeError('Order was cancelled');
+        } else {
+          setTradeError('Order not filled - please try again');
+        }
       }
 
     } catch (error: unknown) {
@@ -484,7 +494,7 @@ export default function TradePanel({
               </div>
             )}
             <div className="text-xs text-gray-500 text-center mb-2">
-              Market order typically fills within 30s
+              Order valid for 60s • Auto-expires if not filled
             </div>
             <a
               href={getOrderExplorerUrl(targetChainId, orderId)}
