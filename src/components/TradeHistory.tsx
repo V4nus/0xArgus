@@ -59,32 +59,36 @@ export default function TradeHistory({
         if (result.success && result.data) {
           const newTrades = result.data as Trade[];
 
-          // Detect new trades for highlighting
-          if (!isInitialLoad.current) {
-            const newIds = new Set<string>();
-            newTrades.forEach((trade) => {
-              if (!prevTradesRef.current.has(trade.txHash)) {
-                newIds.add(trade.txHash);
+          // Only update if we got data (don't clear existing data on empty response)
+          if (newTrades.length > 0 || isInitialLoad.current) {
+            // Detect new trades for highlighting
+            if (!isInitialLoad.current) {
+              const newIds = new Set<string>();
+              newTrades.forEach((trade) => {
+                if (!prevTradesRef.current.has(trade.txHash)) {
+                  newIds.add(trade.txHash);
+                }
+              });
+
+              if (newIds.size > 0) {
+                setNewTradeIds(newIds);
+                // Clear highlights after animation
+                setTimeout(() => setNewTradeIds(new Set()), 1000);
               }
-            });
-
-            if (newIds.size > 0) {
-              setNewTradeIds(newIds);
-              // Clear highlights after animation
-              setTimeout(() => setNewTradeIds(new Set()), 1000);
             }
+
+            // Update prev trades ref
+            prevTradesRef.current = new Set(newTrades.map((t) => t.txHash));
+
+            // Sort by timestamp descending (newest first)
+            const sortedTrades = newTrades.sort((a, b) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+
+            setTrades(sortedTrades);
+            setError(null);
           }
-
-          // Update prev trades ref
-          prevTradesRef.current = new Set(newTrades.map((t) => t.txHash));
-
-          // Sort by timestamp descending (newest first)
-          const sortedTrades = newTrades.sort((a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          );
-
-          setTrades(sortedTrades);
-          setError(null);
+          // If empty response on refresh, keep existing data
         } else if (result.message) {
           // V4 pool message
           setError(result.message);
