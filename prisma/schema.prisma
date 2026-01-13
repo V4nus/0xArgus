@@ -115,3 +115,39 @@ model V4Trade {
   @@index([blockNumber])
   @@index([timestamp])
 }
+
+// Pre-computed OHLCV candle data
+model OHLCVCandle {
+  id          String   @id @default(cuid())
+  chainId     String
+  poolAddress String
+  interval    String   // '1m', '5m', '15m', '1h', '4h', '1d'
+  timestamp   DateTime // Candle open time (rounded to interval)
+  open        Float
+  high        Float
+  low         Float
+  close       Float
+  volume      Float
+  tradeCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([chainId, poolAddress, interval, timestamp])
+  @@index([chainId, poolAddress, interval])
+  @@index([timestamp])
+}
+
+// Track which pools need OHLCV sync
+model OHLCVSyncStatus {
+  id             String   @id @default(cuid())
+  chainId        String
+  poolAddress    String
+  interval       String   // '1m', '5m', '15m', '1h', '4h', '1d'
+  lastSyncTime   DateTime // Last candle timestamp synced
+  lastFetchTime  DateTime @default(now()) // When we last fetched from API
+  isActive       Boolean  @default(true) // Whether to continue syncing
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([chainId, poolAddress, interval])
+}
