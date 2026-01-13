@@ -35,6 +35,7 @@ interface TradePanelProps {
   baseSymbol: string;
   quoteSymbol: string;
   currentPrice?: number;
+  onTradeSuccess?: (tradeType: 'buy' | 'sell') => void;
 }
 
 type TradeStatus = 'idle' | 'signing' | 'submitting' | 'success' | 'error';
@@ -46,6 +47,7 @@ export default function TradePanel({
   baseSymbol,
   quoteSymbol,
   currentPrice = 0,
+  onTradeSuccess,
 }: TradePanelProps) {
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
@@ -354,9 +356,10 @@ export default function TradePanel({
         buySymbol: tradeType === 'buy' ? baseSymbol : quoteSymbol,
       });
 
-      // Trigger fire effect animation
+      // Trigger eye logo animation (local) and chart beam effect (parent)
       setShowFireEffect(true);
       setTimeout(() => setShowFireEffect(false), 1500);
+      onTradeSuccess?.(tradeType);
 
       // Reset form after success
       setTimeout(() => {

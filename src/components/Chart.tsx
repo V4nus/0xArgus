@@ -16,6 +16,8 @@ import { OHLCVData, TimeInterval, TIME_INTERVALS } from '@/types';
 import { getOHLCVData } from '@/lib/api';
 import { getRealtimeService, OHLCVUpdate, RealtimeBar } from '@/lib/realtime';
 
+export type TradeEffectType = 'buy' | 'sell' | null;
+
 interface ChartProps {
   chainId: string;
   poolAddress: string;
@@ -23,6 +25,8 @@ interface ChartProps {
   priceUsd?: number;
   baseTokenAddress?: string;
   quoteTokenAddress?: string;
+  tradeEffect?: TradeEffectType;
+  onTradeEffectComplete?: () => void;
 }
 
 type ScaleMode = 'regular' | 'indexed' | 'logarithmic';
@@ -38,6 +42,8 @@ export default function Chart({
   poolAddress,
   symbol,
   baseTokenAddress,
+  tradeEffect,
+  onTradeEffectComplete,
 }: ChartProps) {
   const mainChartContainerRef = useRef<HTMLDivElement>(null);
   const mainChartRef = useRef<IChartApi | null>(null);
@@ -52,6 +58,20 @@ export default function Chart({
   const [showScaleMenu, setShowScaleMenu] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const scaleMenuRef = useRef<HTMLDivElement>(null);
+  const [showTradeEffect, setShowTradeEffect] = useState<'buy' | 'sell' | null>(null);
+
+  // Handle trade effect trigger from parent
+  useEffect(() => {
+    if (tradeEffect) {
+      setShowTradeEffect(tradeEffect);
+      // Auto-clear effect after animation completes
+      const timer = setTimeout(() => {
+        setShowTradeEffect(null);
+        onTradeEffectComplete?.();
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [tradeEffect, onTradeEffectComplete]);
 
   // Initialize main chart
   useEffect(() => {
@@ -312,6 +332,111 @@ export default function Chart({
           </div>
         )}
         <div ref={mainChartContainerRef} className="w-full h-full" />
+
+        {/* Trade Effect Overlay */}
+        {showTradeEffect && (
+          <>
+            {/* Buy Effect: Green light beam crossing from right to left */}
+            {showTradeEffect === 'buy' && (
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+                {/* Main beam */}
+                <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 animate-buy-beam">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#3fb950] to-transparent shadow-[0_0_20px_#3fb950,0_0_40px_#3fb950,0_0_60px_#3fb950]" />
+                </div>
+                {/* Glow trail */}
+                <div className="absolute top-1/2 -translate-y-1/2 w-full h-8 animate-buy-beam opacity-30">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#3fb950] to-transparent blur-xl" />
+                </div>
+                {/* Vertical scanlines for effect */}
+                <div className="absolute inset-0 animate-buy-flash opacity-20">
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#3fb950]/0 via-[#3fb950]/10 to-[#3fb950]/0" />
+                </div>
+              </div>
+            )}
+
+            {/* Sell Effect: Red light beam from center going downward */}
+            {showTradeEffect === 'sell' && (
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+                {/* Vertical beam */}
+                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 w-1 h-full animate-sell-beam">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f85149] to-transparent shadow-[0_0_20px_#f85149,0_0_40px_#f85149,0_0_60px_#f85149]" />
+                </div>
+                {/* Glow trail */}
+                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 w-8 h-full animate-sell-beam opacity-30">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f85149] to-transparent blur-xl" />
+                </div>
+                {/* Horizontal scanlines for effect */}
+                <div className="absolute inset-0 animate-sell-flash opacity-20">
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#f85149]/0 via-[#f85149]/10 to-[#f85149]/0" />
+                </div>
+              </div>
+            )}
+
+            {/* CSS for trade effect animations */}
+            <style jsx>{`
+              @keyframes buy-beam {
+                0% {
+                  transform: translateX(100%) translateY(-50%);
+                  opacity: 0;
+                }
+                10% {
+                  opacity: 1;
+                }
+                90% {
+                  opacity: 1;
+                }
+                100% {
+                  transform: translateX(-100%) translateY(-50%);
+                  opacity: 0;
+                }
+              }
+              @keyframes buy-flash {
+                0%, 100% {
+                  opacity: 0;
+                }
+                50% {
+                  opacity: 0.3;
+                }
+              }
+              @keyframes sell-beam {
+                0% {
+                  transform: translateX(-50%) translateY(-50%);
+                  opacity: 0;
+                }
+                10% {
+                  opacity: 1;
+                }
+                90% {
+                  opacity: 1;
+                }
+                100% {
+                  transform: translateX(-50%) translateY(100%);
+                  opacity: 0;
+                }
+              }
+              @keyframes sell-flash {
+                0%, 100% {
+                  opacity: 0;
+                }
+                50% {
+                  opacity: 0.3;
+                }
+              }
+              .animate-buy-beam {
+                animation: buy-beam 1s ease-out forwards;
+              }
+              .animate-buy-flash {
+                animation: buy-flash 0.5s ease-in-out;
+              }
+              .animate-sell-beam {
+                animation: sell-beam 1s ease-out forwards;
+              }
+              .animate-sell-flash {
+                animation: sell-flash 0.5s ease-in-out;
+              }
+            `}</style>
+          </>
+        )}
       </div>
     </div>
   );

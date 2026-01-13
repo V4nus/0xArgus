@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PoolInfo } from '@/types';
 import { formatNumber, formatPercentage } from '@/lib/api';
 import { ArrowLeft, ExternalLink, Copy, Check, Star } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import TokenLogo, { TokenPairLogos } from '@/components/TokenLogo';
 import { isFavorite, toggleFavorite } from '@/lib/favorites';
 import FavoritesSidebar from '@/components/FavoritesSidebar';
@@ -62,7 +62,17 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [isFav, setIsFav] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [tradeEffect, setTradeEffect] = useState<'buy' | 'sell' | null>(null);
   const priceChangeColor = pool.priceChange24h >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
+
+  // Handle trade success - trigger chart beam effect
+  const handleTradeSuccess = useCallback((tradeType: 'buy' | 'sell') => {
+    setTradeEffect(tradeType);
+  }, []);
+
+  const handleTradeEffectComplete = useCallback(() => {
+    setTradeEffect(null);
+  }, []);
 
   // Check if pool is favorited on mount
   useEffect(() => {
@@ -217,6 +227,8 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
               poolAddress={pool.poolAddress}
               symbol={`${pool.baseToken.symbol}/${pool.quoteToken.symbol}`}
               baseTokenAddress={pool.baseToken.address}
+              tradeEffect={tradeEffect}
+              onTradeEffectComplete={handleTradeEffectComplete}
             />
           </div>
 
@@ -239,6 +251,7 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
             quoteTokenAddress={pool.quoteToken.address}
             baseSymbol={pool.baseToken.symbol}
             quoteSymbol={pool.quoteToken.symbol}
+            onTradeSuccess={handleTradeSuccess}
           />
         </div>
 
