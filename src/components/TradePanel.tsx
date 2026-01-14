@@ -315,6 +315,9 @@ export default function TradePanel({
           });
           setUniswapQuote(uniswapResult);
           setQuote(null);
+          // Refresh allowances to ensure accurate approval status
+          await refetchAllowanceTokenToPermit2();
+          await refetchPermit2Allowance();
         } catch (uniswapError) {
           console.error('Uniswap quote error, falling back to CoW:', uniswapError);
           // Fallback to CoW if Uniswap fails
@@ -407,13 +410,34 @@ export default function TradePanel({
     : false;
 
   // Check if approval is needed (for Uniswap - need both Token->Permit2 AND Permit2->Router)
+  // Also check Permit2 expiration (second element of tuple is expiration timestamp)
+  const permit2Expiration = permit2AllowanceData ? (permit2AllowanceData as [bigint, number, number])[1] : 0;
+  const isPermit2Expired = permit2Expiration > 0 && permit2Expiration < Math.floor(Date.now() / 1000);
+
   const needsTokenToPermit2Approval = !isSellTokenNative && uniswapQuote && allowanceTokenToPermit2 !== undefined
     ? BigInt(allowanceTokenToPermit2 as bigint) < BigInt(uniswapQuote.sellAmount)
     : false;
   const needsPermit2ToRouterApproval = !isSellTokenNative && uniswapQuote
-    ? allowancePermit2ToRouter < BigInt(uniswapQuote.sellAmount)
+    ? (allowancePermit2ToRouter < BigInt(uniswapQuote.sellAmount) || isPermit2Expired)
     : false;
   const needsApprovalUniswap = needsTokenToPermit2Approval || needsPermit2ToRouterApproval;
+
+  // Debug logging for approval status
+  useEffect(() => {
+    if (uniswapQuote && !isSellTokenNative) {
+      console.log('Approval status:', {
+        sellToken: sellTokenAddress,
+        sellAmount: uniswapQuote.sellAmount,
+        allowanceTokenToPermit2: allowanceTokenToPermit2?.toString(),
+        allowancePermit2ToRouter: allowancePermit2ToRouter.toString(),
+        permit2Expiration: permit2Expiration,
+        isPermit2Expired,
+        needsTokenToPermit2Approval,
+        needsPermit2ToRouterApproval,
+        needsApprovalUniswap,
+      });
+    }
+  }, [uniswapQuote, allowanceTokenToPermit2, allowancePermit2ToRouter, permit2Expiration, isPermit2Expired, needsTokenToPermit2Approval, needsPermit2ToRouterApproval, needsApprovalUniswap, sellTokenAddress, isSellTokenNative]);
 
   // Use the appropriate approval check based on aggregator
   const needsApproval = aggregator === 'cow' ? needsApprovalCow : needsApprovalUniswap;
