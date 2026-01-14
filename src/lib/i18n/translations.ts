@@ -45,6 +45,17 @@ export interface Translations {
     realLiquidity: string;
     priceImpact: string;
     depthScanner: string;
+    // Dashboard
+    trendingPools: string;
+    updatedLive: string;
+    totalLiquidity: string;
+    volume24h: string;
+    poolsTracked: string;
+    depth: string;
+    deep: string;
+    medium: string;
+    shallow: string;
+    exploreRealPools: string;
   };
 
   // Trade Panel
@@ -180,6 +191,16 @@ export const translations: Record<Language, Translations> = {
       realLiquidity: 'Real Liquidity',
       priceImpact: 'Price Impact',
       depthScanner: 'Liquidity Depth Scanner',
+      trendingPools: 'Trending Pools',
+      updatedLive: 'Updated live',
+      totalLiquidity: 'Total Liquidity',
+      volume24h: '24h Volume',
+      poolsTracked: 'Pools Tracked',
+      depth: 'Depth',
+      deep: 'Deep',
+      medium: 'Medium',
+      shallow: 'Shallow',
+      exploreRealPools: 'Explore Real Pools',
     },
     trade: {
       swap: 'Swap',
@@ -300,6 +321,16 @@ export const translations: Record<Language, Translations> = {
       realLiquidity: '실제 유동성',
       priceImpact: '가격 영향',
       depthScanner: '유동성 깊이 스캐너',
+      trendingPools: '인기 풀',
+      updatedLive: '실시간 업데이트',
+      totalLiquidity: '총 유동성',
+      volume24h: '24시간 거래량',
+      poolsTracked: '추적 풀 수',
+      depth: '깊이',
+      deep: '깊음',
+      medium: '보통',
+      shallow: '얕음',
+      exploreRealPools: '실제 풀 탐색',
     },
     trade: {
       swap: '스왑',
@@ -420,6 +451,16 @@ export const translations: Record<Language, Translations> = {
       realLiquidity: '実際の流動性',
       priceImpact: '価格インパクト',
       depthScanner: '流動性深度スキャナー',
+      trendingPools: '人気プール',
+      updatedLive: 'リアルタイム更新',
+      totalLiquidity: '総流動性',
+      volume24h: '24時間取引量',
+      poolsTracked: '追跡プール数',
+      depth: '深度',
+      deep: '深い',
+      medium: '中程度',
+      shallow: '浅い',
+      exploreRealPools: '実際のプールを探索',
     },
     trade: {
       swap: 'スワップ',
@@ -540,6 +581,16 @@ export const translations: Record<Language, Translations> = {
       realLiquidity: 'Liquidez Real',
       priceImpact: 'Impacto de Precio',
       depthScanner: 'Escáner de Profundidad de Liquidez',
+      trendingPools: 'Pools en Tendencia',
+      updatedLive: 'Actualizado en vivo',
+      totalLiquidity: 'Liquidez Total',
+      volume24h: 'Volumen 24h',
+      poolsTracked: 'Pools Rastreados',
+      depth: 'Profundidad',
+      deep: 'Profundo',
+      medium: 'Medio',
+      shallow: 'Superficial',
+      exploreRealPools: 'Explorar Pools Reales',
     },
     trade: {
       swap: 'Intercambiar',
@@ -660,6 +711,16 @@ export const translations: Record<Language, Translations> = {
       realLiquidity: 'Liquidez Real',
       priceImpact: 'Impacto de Preço',
       depthScanner: 'Scanner de Profundidade de Liquidez',
+      trendingPools: 'Pools em Alta',
+      updatedLive: 'Atualizado ao vivo',
+      totalLiquidity: 'Liquidez Total',
+      volume24h: 'Volume 24h',
+      poolsTracked: 'Pools Rastreados',
+      depth: 'Profundidade',
+      deep: 'Profundo',
+      medium: 'Médio',
+      shallow: 'Raso',
+      exploreRealPools: 'Explorar Pools Reais',
     },
     trade: {
       swap: 'Trocar',
@@ -780,6 +841,16 @@ export const translations: Record<Language, Translations> = {
       realLiquidity: 'Реальная Ликвидность',
       priceImpact: 'Влияние на Цену',
       depthScanner: 'Сканер Глубины Ликвидности',
+      trendingPools: 'Популярные Пулы',
+      updatedLive: 'Обновляется в реальном времени',
+      totalLiquidity: 'Общая Ликвидность',
+      volume24h: 'Объем 24ч',
+      poolsTracked: 'Отслеживаемых Пулов',
+      depth: 'Глубина',
+      deep: 'Глубокий',
+      medium: 'Средний',
+      shallow: 'Мелкий',
+      exploreRealPools: 'Изучить Реальные Пулы',
     },
     trade: {
       swap: 'Обмен',
