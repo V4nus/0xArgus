@@ -57,7 +57,6 @@ export default function LiquidityDepth({
   const [quoteTokenUsdPrice, setQuoteTokenUsdPrice] = useState<number>(1);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [recentTrades, setRecentTrades] = useState<TradeEvent[]>([]);
   const [tradeAdjustments, setTradeAdjustments] = useState<{ askConsumed: number; bidConsumed: number }>({ askConsumed: 0, bidConsumed: 0 });
   const isInitialLoad = useRef(true);
   const isFetchingRef = useRef(false); // Prevent request stacking
@@ -98,20 +97,14 @@ export default function LiquidityDepth({
     return () => clearInterval(interval);
   }, [quoteSymbol]);
 
-  // Subscribe to real-time trade events
+  // Subscribe to real-time trade events for liquidity adjustment
   useEffect(() => {
     if (!baseTokenAddress) return;
 
     const service = getRealtimeService();
 
     const handleTrade = (trade: TradeEvent) => {
-      // Add trade to recent trades list (keep last 10)
-      setRecentTrades(prev => {
-        const newTrades = [trade, ...prev].slice(0, 10);
-        return newTrades;
-      });
-
-      // Update trade adjustments
+      // Update trade adjustments (simulates liquidity consumption between API refreshes)
       setTradeAdjustments(prev => {
         if (trade.type === 'buy') {
           // Buy = ask liquidity consumed
@@ -620,29 +613,11 @@ export default function LiquidityDepth({
             )}
           </div>
 
-          {/* Current Price with Trade Flow */}
+          {/* Current Price */}
           <div className="bg-[#30363d] px-1 sm:px-2 py-1 my-1 flex-shrink-0">
-            <div className="flex items-center justify-center gap-1 sm:gap-2">
+            <div className="flex items-center justify-center">
               <span className="text-white text-xs sm:text-sm font-medium">${formatNumber(priceUsd)}</span>
-              <span className="text-gray-400 text-[10px] sm:text-xs">Current</span>
             </div>
-            {/* Recent trade indicator */}
-            {recentTrades.length > 0 && (
-              <div className="flex items-center justify-center gap-1 sm:gap-2 mt-1">
-                {recentTrades.slice(0, 3).map((trade, i) => (
-                  <span
-                    key={trade.timestamp + i}
-                    className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded ${
-                      trade.type === 'buy'
-                        ? 'bg-[#3fb950]/20 text-[#3fb950]'
-                        : 'bg-[#f85149]/20 text-[#f85149]'
-                    } animate-pulse`}
-                  >
-                    {trade.type === 'buy' ? '↑' : '↓'} ${formatNumber(trade.estimatedVolumeUsd)}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Bids (buy side) - below current price - scrollable */}
