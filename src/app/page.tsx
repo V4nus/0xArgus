@@ -126,16 +126,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Feature Showcase - Scroll reveal */}
-      <section className="py-16 border-t border-[#1a1a1a] bg-[#080808]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="mb-10">
-            <span className="text-xs text-green-500 uppercase tracking-wider">How it works</span>
-            <h2 className="text-2xl font-bold mt-1">Tick-level liquidity from concentrated AMMs</h2>
-          </div>
-          <LiquidityShowcase />
-        </div>
-      </section>
+      {/* Feature Showcase - Full-screen scroll sections */}
+      <LiquidityShowcase />
 
       {/* Footer */}
       <footer className="border-t border-[#1a1a1a] py-6">
