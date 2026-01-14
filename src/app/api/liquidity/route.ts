@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLiquidityDepth, getSimpleLiquidity, getV4LiquidityDepth } from '@/lib/liquidity';
+import { getLiquidityDepth, getSimpleLiquidity, getV4LiquidityDepth, getV2LiquidityDepth } from '@/lib/liquidity';
 import { getLatestLiquidityFromDb, syncLiquidityDepth, syncPoolInfo } from '@/lib/db-sync';
 
 // Validate EVM address (20 bytes = 40 hex chars + 0x prefix)
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Try V3 depth from RPC
+    // Try V3 depth from RPC first
     const depth = await getLiquidityDepth(chainId, poolAddress, priceUsd, levels);
 
     if (depth && (depth.bids.length > 0 || depth.asks.length > 0)) {
@@ -100,7 +100,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fallback to simple liquidity (V2 style)
+    // Try V2 depth (PancakeSwap V2, Uniswap V2, etc.)
+    const v2Depth = await getV2LiquidityDepth(chainId, poolAddress, priceUsd, levels);
+    if (v2Depth && (v2Depth.bids.length > 0 || v2Depth.asks.length > 0)) {
+      return NextResponse.json(
+        { type: 'depth', data: v2Depth, version: 'v2', source: 'rpc' },
+        { headers: cacheHeaders }
+      );
+    }
+
+    // Fallback to simple liquidity (just reserves)
     const simple = await getSimpleLiquidity(chainId, poolAddress);
     if (simple) {
       return NextResponse.json(

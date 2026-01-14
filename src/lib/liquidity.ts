@@ -1084,3 +1084,198 @@ export async function getSimpleLiquidity(
     return null;
   }
 }
+
+// V2 liquidity depth using constant product formula (x * y = k)
+// This calculates how much liquidity is available at different price levels
+export async function getV2LiquidityDepth(
+  chainId: string,
+  poolAddress: string,
+  priceUsd: number,
+  levels: number = 50
+): Promise<DepthData | null> {
+  try {
+    const chain = CHAINS[chainId];
+    const rpcUrl = getRpcUrl(chainId);
+
+    if (!chain || !rpcUrl) {
+      console.error('Unsupported chain:', chainId);
+      return null;
+    }
+
+    if (!isValidEvmAddress(poolAddress)) {
+      console.error('Invalid EVM address format:', poolAddress);
+      return null;
+    }
+
+    const client = createPublicClient({
+      chain,
+      transport: http(rpcUrl, { timeout: 10000 }),
+    });
+
+    // V2 Pool ABI (Uniswap V2 / PancakeSwap V2 compatible)
+    const V2_POOL_ABI = parseAbi([
+      'function token0() view returns (address)',
+      'function token1() view returns (address)',
+      'function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+    ]);
+
+    // Get pool data
+    let token0Addr: `0x${string}`, token1Addr: `0x${string}`;
+    let reserves: readonly [bigint, bigint, number];
+
+    try {
+      [token0Addr, token1Addr, reserves] = await Promise.all([
+        client.readContract({
+          address: poolAddress as `0x${string}`,
+          abi: V2_POOL_ABI,
+          functionName: 'token0',
+        }),
+        client.readContract({
+          address: poolAddress as `0x${string}`,
+          abi: V2_POOL_ABI,
+          functionName: 'token1',
+        }),
+        client.readContract({
+          address: poolAddress as `0x${string}`,
+          abi: V2_POOL_ABI,
+          functionName: 'getReserves',
+        }),
+      ]) as [`0x${string}`, `0x${string}`, readonly [bigint, bigint, number]];
+    } catch (e) {
+      console.error('Not a V2 pool or failed to read:', e);
+      return null;
+    }
+
+    const [reserve0Raw, reserve1Raw] = reserves;
+
+    // Get token info
+    const [decimals0, decimals1, symbol0, symbol1] = await Promise.all([
+      client.readContract({ address: token0Addr, abi: ERC20_ABI, functionName: 'decimals' }),
+      client.readContract({ address: token1Addr, abi: ERC20_ABI, functionName: 'decimals' }),
+      client.readContract({ address: token0Addr, abi: ERC20_ABI, functionName: 'symbol' }),
+      client.readContract({ address: token1Addr, abi: ERC20_ABI, functionName: 'symbol' }),
+    ]);
+
+    const dec0 = Number(decimals0);
+    const dec1 = Number(decimals1);
+    const reserve0 = Number(formatUnits(reserve0Raw, dec0));
+    const reserve1 = Number(formatUnits(reserve1Raw, dec1));
+
+    // Determine base/quote tokens using known quote tokens
+    const knownQuotePrices: Record<string, number> = {
+      'WETH': 3500, 'ETH': 3500,
+      'USDC': 1, 'USDT': 1, 'DAI': 1, 'BUSD': 1,
+      'WBNB': 600, 'BNB': 600,
+    };
+
+    const symbol0Upper = (symbol0 as string).toUpperCase();
+    const symbol1Upper = (symbol1 as string).toUpperCase();
+    const token0IsKnownQuote = symbol0Upper in knownQuotePrices;
+    const token1IsKnownQuote = symbol1Upper in knownQuotePrices;
+
+    let isToken0Base: boolean;
+    if (token1IsKnownQuote && !token0IsKnownQuote) {
+      isToken0Base = true;
+    } else if (token0IsKnownQuote && !token1IsKnownQuote) {
+      isToken0Base = false;
+    } else {
+      isToken0Base = priceUsd < 1;
+    }
+
+    // k = x * y (constant product)
+    const k = reserve0 * reserve1;
+
+    // Current pool price (token1/token0)
+    const poolPrice = reserve1 / reserve0;
+
+    // Generate price levels using constant product formula
+    const bids: LiquidityLevel[] = [];
+    const asks: LiquidityLevel[] = [];
+
+    const maxPct = levels; // Max percentage range (50 or 100)
+
+    // Generate 50 levels for each side
+    for (let i = 1; i <= 50; i++) {
+      const ratio = i / 50;
+      const pctChange = maxPct * Math.pow(ratio, 1.5); // Non-linear distribution
+
+      // BID: Price goes DOWN - user buys base token (sells quote)
+      // In V2: selling quote (token1) to buy base (token0)
+      // New price = poolPrice * (1 - pctChange/100)
+      const bidPriceRatio = 1 - pctChange / 100;
+      if (bidPriceRatio > 0) {
+        // At new price p', with k constant:
+        // reserve0' * reserve1' = k
+        // reserve1' / reserve0' = p'
+        // So: reserve0' = sqrt(k / p'), reserve1' = sqrt(k * p')
+        const newPoolPrice = poolPrice * bidPriceRatio;
+        const newReserve0 = Math.sqrt(k / newPoolPrice);
+        const newReserve1 = Math.sqrt(k * newPoolPrice);
+
+        // Amount of token0 gained (bought)
+        const token0Bought = newReserve0 - reserve0;
+        // Amount of token1 spent (sold)
+        const token1Spent = reserve1 - newReserve1;
+
+        if (token0Bought > 0 && token1Spent > 0) {
+          const bidPrice = priceUsd * bidPriceRatio;
+          const liquidityUSD = isToken0Base ? token0Bought * bidPrice : token1Spent * priceUsd;
+
+          bids.push({
+            price: bidPrice,
+            token0Amount: isToken0Base ? token0Bought : token1Spent,
+            token1Amount: isToken0Base ? token1Spent : token0Bought,
+            liquidityUSD: Math.abs(liquidityUSD),
+          });
+        }
+      }
+
+      // ASK: Price goes UP - user sells base token (buys quote)
+      // In V2: selling base (token0) to buy quote (token1)
+      const askPriceRatio = 1 + pctChange / 100;
+      const newPoolPriceAsk = poolPrice * askPriceRatio;
+      const newReserve0Ask = Math.sqrt(k / newPoolPriceAsk);
+      const newReserve1Ask = Math.sqrt(k * newPoolPriceAsk);
+
+      // Amount of token0 sold
+      const token0Sold = reserve0 - newReserve0Ask;
+      // Amount of token1 gained
+      const token1Gained = newReserve1Ask - reserve1;
+
+      if (token0Sold > 0 && token1Gained > 0) {
+        const askPrice = priceUsd * askPriceRatio;
+        const liquidityUSD = isToken0Base ? token0Sold * priceUsd : token1Gained * askPrice;
+
+        asks.push({
+          price: askPrice,
+          token0Amount: isToken0Base ? token0Sold : token1Gained,
+          token1Amount: isToken0Base ? token1Gained : token0Sold,
+          liquidityUSD: Math.abs(liquidityUSD),
+        });
+      }
+    }
+
+    // Sort: bids descending (highest first), asks ascending (lowest first)
+    bids.sort((a, b) => b.price - a.price);
+    asks.sort((a, b) => a.price - b.price);
+
+    const baseSymbol = isToken0Base ? symbol0 as string : symbol1 as string;
+    const quoteSymbol = isToken0Base ? symbol1 as string : symbol0 as string;
+
+    console.log(`[V2 Depth] Pool: reserve0=${reserve0.toFixed(2)}, reserve1=${reserve1.toFixed(2)}, k=${k.toFixed(2)}`);
+    console.log(`[V2 Depth] Result: ${bids.length} bids, ${asks.length} asks, base=${baseSymbol}, quote=${quoteSymbol}`);
+
+    return {
+      bids,
+      asks,
+      currentPrice: priceUsd > 0 ? priceUsd : 1,
+      token0Symbol: baseSymbol,
+      token1Symbol: quoteSymbol,
+      token0Decimals: isToken0Base ? dec0 : dec1,
+      token1Decimals: isToken0Base ? dec1 : dec0,
+    };
+  } catch (error) {
+    console.error('Error fetching V2 liquidity depth:', error);
+    return null;
+  }
+}
