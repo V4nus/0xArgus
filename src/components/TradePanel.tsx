@@ -26,6 +26,7 @@ import {
   selectAggregator,
   COW_MIN_TRADE_USD,
   UNISWAP_ROUTER,
+  PERMIT2_ADDRESS,
   type UniswapQuote,
 } from '@/lib/uniswap';
 
@@ -156,15 +157,16 @@ export default function TradePanel({
     query: { enabled: !isSellTokenNative && !!address && !!VAULT_RELAYER[targetChainId] },
   });
 
-  // Allowance for Uniswap SwapRouter02 (direct approve, no Permit2)
-  const uniswapRouterAddress = UNISWAP_ROUTER[targetChainId];
+  // Allowance for Uniswap via Permit2
+  // Universal Router uses Permit2, so we approve Permit2 contract
+  const permit2Address = PERMIT2_ADDRESS as `0x${string}`;
   const { data: allowanceUniswap, refetch: refetchAllowanceUniswap } = useReadContract({
     address: !isSellTokenNative ? sellTokenAddress as `0x${string}` : undefined,
     abi: erc20Abi,
     functionName: 'allowance',
-    args: address && uniswapRouterAddress ? [address, uniswapRouterAddress as `0x${string}`] : undefined,
+    args: address && permit2Address ? [address, permit2Address] : undefined,
     chainId: targetChainId,
-    query: { enabled: !isSellTokenNative && !!address && !!uniswapRouterAddress },
+    query: { enabled: !isSellTokenNative && !!address },
   });
 
   // Get decimals for input token
@@ -372,10 +374,10 @@ export default function TradePanel({
 
     // Determine which spender to approve based on aggregator
     // For CoW: approve VAULT_RELAYER
-    // For Uniswap: approve SwapRouter02 directly
+    // For Uniswap: approve Permit2 contract (Universal Router uses Permit2)
     const spender = aggregator === 'cow'
       ? VAULT_RELAYER[targetChainId]
-      : uniswapRouterAddress as `0x${string}`;
+      : permit2Address;
 
     if (!spender) return;
 

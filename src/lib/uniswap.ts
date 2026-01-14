@@ -1,17 +1,20 @@
 /**
- * Uniswap integration for instant swaps via Smart Order Router
- * Uses SwapRouter02 for direct approve support (no Permit2 needed)
+ * Uniswap integration via Universal Router
+ * Uses Permit2 for token approvals
  * Used for small trades where CoW batch auctions may timeout
  */
 
-// Uniswap SwapRouter02 addresses per chain (supports direct approve)
-const UNISWAP_ROUTER: Record<number, string> = {
-  1: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',      // Ethereum
-  8453: '0x2626664c2603336E57B271c5C0b26F421741e481',   // Base
-  42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Arbitrum
-  137: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',   // Polygon
-  10: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',    // Optimism
+// Uniswap Universal Router addresses per chain
+const UNIVERSAL_ROUTER: Record<number, string> = {
+  1: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',      // Ethereum
+  8453: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',   // Base
+  42161: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD', // Arbitrum
+  137: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',   // Polygon
+  10: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',    // Optimism
 };
+
+// Permit2 address (same on all chains)
+const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
 // Uniswap Quoter V2 addresses per chain
 const UNISWAP_QUOTER: Record<number, string> = {
@@ -47,6 +50,8 @@ export interface UniswapQuote {
   value: string;
   estimatedGas: string;
   priceImpact: string;
+  permit2Address?: string;
+  needsPermit2?: boolean;
 }
 
 /**
@@ -84,5 +89,6 @@ export function selectAggregator(amountUsd: number): 'cow' | 'uniswap' {
   return amountUsd >= COW_MIN_TRADE_USD ? 'cow' : 'uniswap';
 }
 
-// Export router addresses for use in components
-export { UNISWAP_ROUTER, UNISWAP_QUOTER };
+// Export addresses for use in components
+// UNISWAP_ROUTER now points to Permit2 for approval (not Universal Router directly)
+export { UNIVERSAL_ROUTER as UNISWAP_ROUTER, PERMIT2_ADDRESS, UNISWAP_QUOTER };
