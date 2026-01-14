@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Token, CurrencyAmount, TradeType, Percent } from '@uniswap/sdk-core';
 import { AlphaRouter, SwapType } from '@uniswap/smart-order-router';
-import { SwapRouter } from '@uniswap/universal-router-sdk';
 import { ethers } from 'ethers';
 
 // Chain configs with RPC URLs
@@ -28,17 +27,14 @@ const CHAIN_CONFIG: Record<number, { name: string; rpcUrl: string }> = {
   },
 };
 
-// Universal Router addresses per chain
-const UNIVERSAL_ROUTER: Record<number, string> = {
-  1: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',
-  8453: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',
-  42161: '0x5E325eDA8064b456f4781070C0738d849c824258',
-  137: '0xec7BE89e9d109e7e3Fec59c222CF297125FEFda2',
-  10: '0xCb1355ff08Ab38bBCE60111F1bb2B784bE25D7e8',
+// SwapRouter02 addresses per chain (supports direct approve, no Permit2 needed)
+const SWAP_ROUTER_02: Record<number, string> = {
+  1: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
+  8453: '0x2626664c2603336E57B271c5C0b26F421741e481',
+  42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
+  137: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
+  10: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
 };
-
-// Permit2 addresses (same on all chains)
-const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
 // WETH addresses per chain (for native token handling)
 const WETH: Record<number, string> = {
@@ -138,6 +134,7 @@ export async function GET(request: NextRequest) {
     const router = getRouter(chainId);
     const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
 
+    // Use SWAP_ROUTER_02 for direct approve support (no Permit2 needed)
     const route = await router.route(
       amountIn,
       tokenOut,
@@ -146,7 +143,7 @@ export async function GET(request: NextRequest) {
         recipient: takerAddress,
         slippageTolerance: new Percent(slippageBps, 10000),
         deadline,
-        type: SwapType.UNIVERSAL_ROUTER, // Use Universal Router
+        type: SwapType.SWAP_ROUTER_02, // Use SwapRouter02 instead of Universal Router
       }
     );
 
@@ -180,12 +177,11 @@ export async function GET(request: NextRequest) {
       estimatedGas: route.estimatedGasUsed.toString(),
       priceImpact: route.trade?.priceImpact?.toFixed(2) || '0',
       route: routeDescription,
-      // For approval - user needs to approve Permit2, not the router directly
-      permit2Address: PERMIT2_ADDRESS,
-      universalRouterAddress: UNIVERSAL_ROUTER[chainId],
+      // SwapRouter02 address for approval
+      routerAddress: SWAP_ROUTER_02[chainId],
     });
   } catch (error) {
-    console.error('Uniswap Universal Router error:', error);
+    console.error('Uniswap Smart Router error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to get quote' },
       { status: 500 }
