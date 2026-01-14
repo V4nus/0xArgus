@@ -116,15 +116,15 @@ export default function TradePanel({
   const isSupportedChain = isChainSupported(targetChainId);
   const isCorrectChain = currentChainId === targetChainId;
 
-  // Native balance (for gas)
-  const { data: nativeBalance } = useBalance({
+  // Native balance (for gas) - auto refresh every 10 seconds
+  const { data: nativeBalance, refetch: refetchNativeBalance } = useBalance({
     address,
     chainId: targetChainId,
   });
 
   // Quote token balance (USDC/USDT for buying)
   const isQuoteNative = quoteTokenAddress === NATIVE_TOKEN_ADDRESS;
-  const { data: quoteBalance } = useReadContract({
+  const { data: quoteBalance, refetch: refetchQuoteBalance } = useReadContract({
     address: !isQuoteNative ? quoteTokenAddress as `0x${string}` : undefined,
     abi: erc20Abi,
     functionName: 'balanceOf',
@@ -142,7 +142,7 @@ export default function TradePanel({
 
   // Base token balance (for selling)
   const isBaseNative = baseTokenAddress === NATIVE_TOKEN_ADDRESS;
-  const { data: baseBalance } = useReadContract({
+  const { data: baseBalance, refetch: refetchBaseBalance } = useReadContract({
     address: !isBaseNative ? baseTokenAddress as `0x${string}` : undefined,
     abi: erc20Abi,
     functionName: 'balanceOf',
@@ -157,6 +157,20 @@ export default function TradePanel({
     chainId: targetChainId,
     query: { enabled: !isBaseNative },
   });
+
+  // Auto-refresh balances every 10 seconds
+  useEffect(() => {
+    if (!isConnected || !address) return;
+
+    const refreshBalances = () => {
+      refetchNativeBalance();
+      if (!isQuoteNative) refetchQuoteBalance();
+      if (!isBaseNative) refetchBaseBalance();
+    };
+
+    const interval = setInterval(refreshBalances, 10000);
+    return () => clearInterval(interval);
+  }, [isConnected, address, isQuoteNative, isBaseNative, refetchNativeBalance, refetchQuoteBalance, refetchBaseBalance]);
 
   // Check allowance for the sell token
   const sellTokenAddress = tradeType === 'buy' ? quoteTokenAddress : baseTokenAddress;
@@ -545,6 +559,11 @@ export default function TradePanel({
       setTradeStatus('filled');
       onTradeSuccess?.(tradeType);
 
+      // Refresh balances after trade
+      refetchNativeBalance();
+      if (!isQuoteNative) refetchQuoteBalance();
+      if (!isBaseNative) refetchBaseBalance();
+
       // Reset form after success
       setTimeout(() => {
         setAmount('');
@@ -662,6 +681,11 @@ export default function TradePanel({
         setTradeStatus('filled');
         // Trigger chart beam effect only when actually filled!
         onTradeSuccess?.(tradeType);
+
+        // Refresh balances after trade
+        refetchNativeBalance();
+        if (!isQuoteNative) refetchQuoteBalance();
+        if (!isBaseNative) refetchBaseBalance();
 
         // Reset form after success
         setTimeout(() => {
