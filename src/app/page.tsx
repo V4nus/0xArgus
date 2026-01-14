@@ -173,207 +173,207 @@ const ALL_POOLS = [
   {
     rank: 1, symbol: 'DEGEN', name: 'Degen', pair: 'DEGEN/WETH', chain: 'base', chainLabel: 'Base',
     poolAddress: '0xc9034c3e7f58003e6ae0c8438e7c8f4598d5acaa',
-    logo: getPoolLogo('DEGEN'),
+    logo: getPoolLogo('DEGEN'), dex: 'uniswap', version: 'V3',
     price: 0.0089, change24h: -5.2, volume24h: 12300000, liquidity: 8900000, mcap: 890000000, liquidityRatio: 1.0,
   },
   {
     rank: 2, symbol: 'BRETT', name: 'Brett', pair: 'BRETT/WETH', chain: 'base', chainLabel: 'Base',
     poolAddress: '0x76bf0abd20f1e0155ce40a62615a90a709a6c3d8',
-    logo: getPoolLogo('BRETT'),
+    logo: getPoolLogo('BRETT'), dex: 'uniswap', version: 'V3',
     price: 0.156, change24h: 8.7, volume24h: 9800000, liquidity: 15200000, mcap: 1500000000, liquidityRatio: 1.01,
   },
   {
     rank: 3, symbol: 'TOSHI', name: 'Toshi', pair: 'TOSHI/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('TOSHI'),
+    poolAddress: '0x0', logo: getPoolLogo('TOSHI'), dex: 'uniswap', version: 'V3',
     price: 0.00032, change24h: 15.3, volume24h: 4500000, liquidity: 3200000, mcap: 320000000, liquidityRatio: 1.0,
   },
   {
     rank: 4, symbol: 'AERO', name: 'Aerodrome', pair: 'AERO/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('AERO'),
+    poolAddress: '0x0', logo: getPoolLogo('AERO'), dex: 'aerodrome', version: 'V2',
     price: 1.25, change24h: 3.2, volume24h: 18000000, liquidity: 45000000, mcap: 750000000, liquidityRatio: 6.0,
   },
   {
     rank: 5, symbol: 'VIRTUAL', name: 'Virtual Protocol', pair: 'VIRTUAL/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('VIRTUAL'),
+    poolAddress: '0x0', logo: getPoolLogo('VIRTUAL'), dex: 'uniswap', version: 'V3',
     price: 2.85, change24h: 12.4, volume24h: 25000000, liquidity: 18000000, mcap: 2800000000, liquidityRatio: 0.64,
   },
   {
     rank: 6, symbol: 'WELL', name: 'Moonwell', pair: 'WELL/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('WELL'),
+    poolAddress: '0x0', logo: getPoolLogo('WELL'), dex: 'uniswap', version: 'V3',
     price: 0.045, change24h: -2.8, volume24h: 3200000, liquidity: 8500000, mcap: 180000000, liquidityRatio: 4.7,
   },
   {
     rank: 7, symbol: 'EXTRA', name: 'Extra Finance', pair: 'EXTRA/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('EXTRA'),
+    poolAddress: '0x0', logo: getPoolLogo('EXTRA'), dex: 'uniswap', version: 'V3',
     price: 0.12, change24h: 5.6, volume24h: 1800000, liquidity: 4200000, mcap: 45000000, liquidityRatio: 9.3,
   },
   {
     rank: 8, symbol: 'BALD', name: 'Bald', pair: 'BALD/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('BALD'),
+    poolAddress: '0x0', logo: getPoolLogo('BALD'), dex: 'uniswap', version: 'V2',
     price: 0.0023, change24h: -12.5, volume24h: 850000, liquidity: 1200000, mcap: 23000000, liquidityRatio: 5.2,
   },
   {
     rank: 9, symbol: 'BASED', name: 'Based', pair: 'BASED/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('BASED'),
+    poolAddress: '0x0', logo: getPoolLogo('BASED'), dex: 'uniswap', version: 'V2',
     price: 0.00089, change24h: 3.4, volume24h: 620000, liquidity: 980000, mcap: 8900000, liquidityRatio: 11.0,
   },
   {
     rank: 10, symbol: 'cbBTC', name: 'Coinbase BTC', pair: 'cbBTC/WETH', chain: 'base', chainLabel: 'Base',
-    poolAddress: '0x0', logo: getPoolLogo('cbBTC'),
+    poolAddress: '0x0', logo: getPoolLogo('cbBTC'), dex: 'uniswap', version: 'V3',
     price: 42500, change24h: 1.2, volume24h: 35000000, liquidity: 85000000, mcap: 4200000000, liquidityRatio: 2.0,
   },
   // BSC pools (10)
   {
     rank: 1, symbol: 'CAKE', name: 'PancakeSwap', pair: 'CAKE/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('CAKE'),
+    poolAddress: '0x0', logo: getPoolLogo('CAKE'), dex: 'pancakeswap', version: 'V3',
     price: 2.45, change24h: 2.1, volume24h: 45000000, liquidity: 120000000, mcap: 680000000, liquidityRatio: 17.6,
   },
   {
     rank: 2, symbol: 'BAKE', name: 'BakerySwap', pair: 'BAKE/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('BAKE'),
+    poolAddress: '0x0', logo: getPoolLogo('BAKE'), dex: 'pancakeswap', version: 'V2',
     price: 0.18, change24h: -3.5, volume24h: 2300000, liquidity: 4500000, mcap: 45000000, liquidityRatio: 10.0,
   },
   {
     rank: 3, symbol: 'XVS', name: 'Venus', pair: 'XVS/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('XVS'),
+    poolAddress: '0x0', logo: getPoolLogo('XVS'), dex: 'pancakeswap', version: 'V3',
     price: 8.90, change24h: 5.8, volume24h: 8900000, liquidity: 25000000, mcap: 130000000, liquidityRatio: 19.2,
   },
   {
     rank: 4, symbol: 'ALPACA', name: 'Alpaca Finance', pair: 'ALPACA/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('ALPACA'),
+    poolAddress: '0x0', logo: getPoolLogo('ALPACA'), dex: 'pancakeswap', version: 'V2',
     price: 0.15, change24h: -1.2, volume24h: 1200000, liquidity: 3800000, mcap: 28000000, liquidityRatio: 13.6,
   },
   {
     rank: 5, symbol: 'RACA', name: 'Radio Caca', pair: 'RACA/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('RACA'),
+    poolAddress: '0x0', logo: getPoolLogo('RACA'), dex: 'pancakeswap', version: 'V2',
     price: 0.00012, change24h: 8.5, volume24h: 5600000, liquidity: 8200000, mcap: 52000000, liquidityRatio: 15.8,
   },
   {
     rank: 6, symbol: 'BSW', name: 'Biswap', pair: 'BSW/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('BSW'),
+    poolAddress: '0x0', logo: getPoolLogo('BSW'), dex: 'biswap', version: 'V2',
     price: 0.065, change24h: -4.2, volume24h: 3400000, liquidity: 9800000, mcap: 42000000, liquidityRatio: 23.3,
   },
   {
     rank: 7, symbol: 'BABY', name: 'BabySwap', pair: 'BABY/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('BABY'),
+    poolAddress: '0x0', logo: getPoolLogo('BABY'), dex: 'babyswap', version: 'V2',
     price: 0.00045, change24h: 2.8, volume24h: 890000, liquidity: 2100000, mcap: 9500000, liquidityRatio: 22.1,
   },
   {
     rank: 8, symbol: 'TWT', name: 'Trust Wallet', pair: 'TWT/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('TWT'),
+    poolAddress: '0x0', logo: getPoolLogo('TWT'), dex: 'pancakeswap', version: 'V3',
     price: 1.15, change24h: 1.5, volume24h: 12000000, liquidity: 35000000, mcap: 480000000, liquidityRatio: 7.3,
   },
   {
     rank: 9, symbol: 'SFP', name: 'SafePal', pair: 'SFP/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('SFP'),
+    poolAddress: '0x0', logo: getPoolLogo('SFP'), dex: 'pancakeswap', version: 'V2',
     price: 0.72, change24h: -0.8, volume24h: 4500000, liquidity: 15000000, mcap: 360000000, liquidityRatio: 4.2,
   },
   {
     rank: 10, symbol: 'LINA', name: 'Linear', pair: 'LINA/BNB', chain: 'bsc', chainLabel: 'BSC',
-    poolAddress: '0x0', logo: getPoolLogo('LINA'),
+    poolAddress: '0x0', logo: getPoolLogo('LINA'), dex: 'pancakeswap', version: 'V2',
     price: 0.0085, change24h: 6.2, volume24h: 2800000, liquidity: 6500000, mcap: 48000000, liquidityRatio: 13.5,
   },
   // Solana pools (10)
   {
     rank: 1, symbol: 'WIF', name: 'dogwifhat', pair: 'WIF/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('WIF'),
+    poolAddress: '0x0', logo: getPoolLogo('WIF'), dex: 'raydium', version: 'CLMM',
     price: 2.34, change24h: -2.1, volume24h: 32000000, liquidity: 18000000, mcap: 2300000000, liquidityRatio: 0.78,
   },
   {
     rank: 2, symbol: 'BONK', name: 'Bonk', pair: 'BONK/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('BONK'),
+    poolAddress: '0x0', logo: getPoolLogo('BONK'), dex: 'raydium', version: 'CLMM',
     price: 0.0000234, change24h: 4.2, volume24h: 28000000, liquidity: 12000000, mcap: 1800000000, liquidityRatio: 0.67,
   },
   {
     rank: 3, symbol: 'JTO', name: 'Jito', pair: 'JTO/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('JTO'),
+    poolAddress: '0x0', logo: getPoolLogo('JTO'), dex: 'orca', version: 'CLMM',
     price: 3.45, change24h: 8.9, volume24h: 45000000, liquidity: 35000000, mcap: 420000000, liquidityRatio: 8.3,
   },
   {
     rank: 4, symbol: 'PYTH', name: 'Pyth Network', pair: 'PYTH/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('PYTH'),
+    poolAddress: '0x0', logo: getPoolLogo('PYTH'), dex: 'orca', version: 'CLMM',
     price: 0.38, change24h: 1.5, volume24h: 22000000, liquidity: 28000000, mcap: 1400000000, liquidityRatio: 2.0,
   },
   {
     rank: 5, symbol: 'JUP', name: 'Jupiter', pair: 'JUP/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('JUP'),
+    poolAddress: '0x0', logo: getPoolLogo('JUP'), dex: 'meteora', version: 'DLMM',
     price: 0.92, change24h: 3.8, volume24h: 85000000, liquidity: 65000000, mcap: 1250000000, liquidityRatio: 5.2,
   },
   {
     rank: 6, symbol: 'ORCA', name: 'Orca', pair: 'ORCA/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('ORCA'),
+    poolAddress: '0x0', logo: getPoolLogo('ORCA'), dex: 'orca', version: 'CLMM',
     price: 4.25, change24h: 5.2, volume24h: 12000000, liquidity: 22000000, mcap: 280000000, liquidityRatio: 7.9,
   },
   {
     rank: 7, symbol: 'RAY', name: 'Raydium', pair: 'RAY/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('RAY'),
+    poolAddress: '0x0', logo: getPoolLogo('RAY'), dex: 'raydium', version: 'CLMM',
     price: 5.80, change24h: -1.8, volume24h: 35000000, liquidity: 48000000, mcap: 850000000, liquidityRatio: 5.6,
   },
   {
     rank: 8, symbol: 'POPCAT', name: 'Popcat', pair: 'POPCAT/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('POPCAT'),
+    poolAddress: '0x0', logo: getPoolLogo('POPCAT'), dex: 'raydium', version: 'AMM',
     price: 0.85, change24h: 18.5, volume24h: 42000000, liquidity: 15000000, mcap: 830000000, liquidityRatio: 1.8,
   },
   {
     rank: 9, symbol: 'RENDER', name: 'Render', pair: 'RENDER/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('RENDER'),
+    poolAddress: '0x0', logo: getPoolLogo('RENDER'), dex: 'orca', version: 'CLMM',
     price: 7.25, change24h: 2.4, volume24h: 28000000, liquidity: 42000000, mcap: 2800000000, liquidityRatio: 1.5,
   },
   {
     rank: 10, symbol: 'KMNO', name: 'Kamino', pair: 'KMNO/SOL', chain: 'solana', chainLabel: 'SOL',
-    poolAddress: '0x0', logo: getPoolLogo('KMNO'),
+    poolAddress: '0x0', logo: getPoolLogo('KMNO'), dex: 'orca', version: 'CLMM',
     price: 0.12, change24h: -3.5, volume24h: 8500000, liquidity: 18000000, mcap: 120000000, liquidityRatio: 15.0,
   },
   // Ethereum pools (10)
   {
     rank: 1, symbol: 'PEPE', name: 'Pepe', pair: 'PEPE/WETH', chain: 'ethereum', chainLabel: 'ETH',
     poolAddress: '0xa43fe16908251ee70ef74718545e4fe6c5ccec9f',
-    logo: getPoolLogo('PEPE'),
+    logo: getPoolLogo('PEPE'), dex: 'uniswap', version: 'V3',
     price: 0.00001234, change24h: 12.5, volume24h: 45600000, liquidity: 28500000, mcap: 5200000000, liquidityRatio: 0.55,
   },
   {
     rank: 2, symbol: 'MOG', name: 'Mog Coin', pair: 'MOG/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('MOG'),
+    poolAddress: '0x0', logo: getPoolLogo('MOG'), dex: 'uniswap', version: 'V3',
     price: 0.0000021, change24h: 25.3, volume24h: 8200000, liquidity: 4500000, mcap: 850000000, liquidityRatio: 0.53,
   },
   {
     rank: 3, symbol: 'TURBO', name: 'Turbo', pair: 'TURBO/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('TURBO'),
+    poolAddress: '0x0', logo: getPoolLogo('TURBO'), dex: 'uniswap', version: 'V2',
     price: 0.0067, change24h: -8.4, volume24h: 5600000, liquidity: 3200000, mcap: 420000000, liquidityRatio: 0.76,
   },
   {
     rank: 4, symbol: 'FLOKI', name: 'Floki', pair: 'FLOKI/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('FLOKI'),
+    poolAddress: '0x0', logo: getPoolLogo('FLOKI'), dex: 'uniswap', version: 'V2',
     price: 0.00017, change24h: 6.8, volume24h: 18000000, liquidity: 9500000, mcap: 1600000000, liquidityRatio: 0.59,
   },
   {
     rank: 5, symbol: 'SHIB', name: 'Shiba Inu', pair: 'SHIB/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('SHIB'),
+    poolAddress: '0x0', logo: getPoolLogo('SHIB'), dex: 'uniswap', version: 'V3',
     price: 0.0000245, change24h: 3.2, volume24h: 125000000, liquidity: 85000000, mcap: 14500000000, liquidityRatio: 0.59,
   },
   {
     rank: 6, symbol: 'APE', name: 'ApeCoin', pair: 'APE/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('APE'),
+    poolAddress: '0x0', logo: getPoolLogo('APE'), dex: 'uniswap', version: 'V3',
     price: 1.45, change24h: -2.1, volume24h: 42000000, liquidity: 35000000, mcap: 870000000, liquidityRatio: 4.0,
   },
   {
     rank: 7, symbol: 'LDO', name: 'Lido DAO', pair: 'LDO/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('LDO'),
+    poolAddress: '0x0', logo: getPoolLogo('LDO'), dex: 'uniswap', version: 'V3',
     price: 2.15, change24h: 1.8, volume24h: 65000000, liquidity: 120000000, mcap: 1920000000, liquidityRatio: 6.25,
   },
   {
     rank: 8, symbol: 'UNI', name: 'Uniswap', pair: 'UNI/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('UNI'),
+    poolAddress: '0x0', logo: getPoolLogo('UNI'), dex: 'uniswap', version: 'V3',
     price: 12.50, change24h: 4.5, volume24h: 180000000, liquidity: 250000000, mcap: 7500000000, liquidityRatio: 3.33,
   },
   {
     rank: 9, symbol: 'AAVE', name: 'Aave', pair: 'AAVE/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('AAVE'),
+    poolAddress: '0x0', logo: getPoolLogo('AAVE'), dex: 'uniswap', version: 'V3',
     price: 285, change24h: 2.8, volume24h: 95000000, liquidity: 180000000, mcap: 4200000000, liquidityRatio: 4.29,
   },
   {
     rank: 10, symbol: 'ENS', name: 'ENS', pair: 'ENS/WETH', chain: 'ethereum', chainLabel: 'ETH',
-    poolAddress: '0x0', logo: getPoolLogo('ENS'),
+    poolAddress: '0x0', logo: getPoolLogo('ENS'), dex: 'uniswap', version: 'V3',
     price: 28.50, change24h: -1.2, volume24h: 32000000, liquidity: 65000000, mcap: 850000000, liquidityRatio: 7.65,
   },
 ];
@@ -641,6 +641,11 @@ function PoolRow({ pool, t }: { pool: typeof ALL_POOLS[0]; t: ReturnType<typeof 
             <span className="text-xs px-1.5 py-0.5 rounded bg-white/5 text-gray-500">
               {pool.chainLabel}
             </span>
+            {pool.version && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#58a6ff]/10 text-[#58a6ff]">
+                {pool.version}
+              </span>
+            )}
           </div>
           <div className="text-xs text-gray-500 truncate">{pool.pair}</div>
         </div>
