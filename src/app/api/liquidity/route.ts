@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLiquidityDepth, getSimpleLiquidity, getV4LiquidityDepth, getV2LiquidityDepth } from '@/lib/liquidity';
+import { getLiquidityDepth, getSimpleLiquidity, getV4LiquidityDepth, getV2LiquidityDepth, detectPoolType } from '@/lib/liquidity';
 import { getLatestLiquidityFromDb, syncLiquidityDepth, syncPoolInfo } from '@/lib/db-sync';
 
 // Validate EVM address (20 bytes = 40 hex chars + 0x prefix)
@@ -52,8 +52,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if this is a V4 pool ID (64 hex chars)
-    if (isV4PoolId(poolAddress)) {
+    // Check if address is valid EVM format (for V2/V3)
+    if (!isV4PoolId(poolAddress) && !isValidEvmAddress(poolAddress)) {
+      return NextResponse.json({
+        error: 'Pool address format not supported for on-chain queries. This may be a non-standard pool type.'
+      }, { status: 400 });
+    }
+
+    // Detect pool type first
+    const poolType = await detectPoolType(chainId, poolAddress);
+    console.log(`[Liquidity API] Pool ${poolAddress} detected as ${poolType}`);
+
+    // Handle based on pool type
+    if (poolType === 'v4') {
       if (!token0Address || !token1Address) {
         return NextResponse.json({
           error: 'V4 pools require token addresses'
@@ -79,46 +90,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No V4 liquidity data available' }, { status: 404 });
     }
 
-    // Check if address is valid V3 EVM format
-    if (!isValidEvmAddress(poolAddress)) {
-      return NextResponse.json({
-        error: 'Pool address format not supported for on-chain queries. This may be a non-standard pool type.'
-      }, { status: 400 });
+    if (poolType === 'v3') {
+      const depth = await getLiquidityDepth(chainId, poolAddress, priceUsd, levels);
+
+      if (depth && (depth.bids.length > 0 || depth.asks.length > 0)) {
+        // Save to database in background (don't await)
+        syncPoolInfo(chainId, poolAddress).catch(console.error);
+        syncLiquidityDepth(chainId, poolAddress, priceUsd).catch(console.error);
+
+        return NextResponse.json(
+          { type: 'depth', data: depth, version: 'v3', source: 'rpc' },
+          { headers: cacheHeaders }
+        );
+      }
+
+      return NextResponse.json({ error: 'No V3 liquidity data available' }, { status: 404 });
     }
 
-    // Try V3 depth from RPC first
-    const depth = await getLiquidityDepth(chainId, poolAddress, priceUsd, levels);
+    if (poolType === 'v2') {
+      const depth = await getV2LiquidityDepth(chainId, poolAddress, priceUsd, levels);
 
-    if (depth && (depth.bids.length > 0 || depth.asks.length > 0)) {
-      // Save to database in background (don't await)
-      syncPoolInfo(chainId, poolAddress).catch(console.error);
-      syncLiquidityDepth(chainId, poolAddress, priceUsd).catch(console.error);
+      if (depth && (depth.bids.length > 0 || depth.asks.length > 0)) {
+        return NextResponse.json(
+          { type: 'depth', data: depth, version: 'v2', source: 'rpc' },
+          { headers: cacheHeaders }
+        );
+      }
 
-      return NextResponse.json(
-        { type: 'depth', data: depth, version: 'v3', source: 'rpc' },
-        { headers: cacheHeaders }
-      );
+      // Fallback to simple liquidity for V2
+      const simple = await getSimpleLiquidity(chainId, poolAddress);
+      if (simple) {
+        return NextResponse.json(
+          { type: 'simple', data: simple, version: 'v2', source: 'rpc' },
+          { headers: cacheHeaders }
+        );
+      }
+
+      return NextResponse.json({ error: 'No V2 liquidity data available' }, { status: 404 });
     }
 
-    // Try V2 depth (PancakeSwap V2, Uniswap V2, etc.)
-    const v2Depth = await getV2LiquidityDepth(chainId, poolAddress, priceUsd, levels);
-    if (v2Depth && (v2Depth.bids.length > 0 || v2Depth.asks.length > 0)) {
-      return NextResponse.json(
-        { type: 'depth', data: v2Depth, version: 'v2', source: 'rpc' },
-        { headers: cacheHeaders }
-      );
-    }
-
-    // Fallback to simple liquidity (just reserves)
-    const simple = await getSimpleLiquidity(chainId, poolAddress);
-    if (simple) {
-      return NextResponse.json(
-        { type: 'simple', data: simple, version: 'v2', source: 'rpc' },
-        { headers: cacheHeaders }
-      );
-    }
-
-    return NextResponse.json({ error: 'No liquidity data available for this pool' }, { status: 404 });
+    return NextResponse.json({ error: 'Unknown pool type - cannot fetch liquidity data' }, { status: 404 });
   } catch (error) {
     console.error('Liquidity API error:', error);
     return NextResponse.json({ error: 'Failed to fetch liquidity data' }, { status: 500 });

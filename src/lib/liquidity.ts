@@ -271,6 +271,66 @@ function isV4PoolId(address: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(address);
 }
 
+// Pool type detection result
+export type PoolType = 'v2' | 'v3' | 'v4' | 'unknown';
+
+// Detect pool type by checking contract functions
+// V2 pools have getReserves(), V3 pools have slot0()
+export async function detectPoolType(chainId: string, poolAddress: string): Promise<PoolType> {
+  // V4 pools have 64-char hex ID
+  if (isV4PoolId(poolAddress)) {
+    return 'v4';
+  }
+
+  if (!isValidEvmAddress(poolAddress)) {
+    return 'unknown';
+  }
+
+  const chain = CHAINS[chainId];
+  const rpcUrl = getRpcUrl(chainId);
+
+  if (!chain || !rpcUrl) {
+    return 'unknown';
+  }
+
+  const client = createPublicClient({
+    chain,
+    transport: http(rpcUrl, { timeout: 5000 }),
+  });
+
+  // Try V3 first (check for slot0 function)
+  try {
+    await client.readContract({
+      address: poolAddress as `0x${string}`,
+      abi: V3_POOL_ABI,
+      functionName: 'slot0',
+    });
+    console.log(`[detectPoolType] ${poolAddress} is V3 pool`);
+    return 'v3';
+  } catch {
+    // Not a V3 pool, try V2
+  }
+
+  // Try V2 (check for getReserves function)
+  try {
+    const V2_CHECK_ABI = parseAbi([
+      'function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+    ]);
+    await client.readContract({
+      address: poolAddress as `0x${string}`,
+      abi: V2_CHECK_ABI,
+      functionName: 'getReserves',
+    });
+    console.log(`[detectPoolType] ${poolAddress} is V2 pool`);
+    return 'v2';
+  } catch {
+    // Not a V2 pool either
+  }
+
+  console.log(`[detectPoolType] ${poolAddress} is unknown pool type`);
+  return 'unknown';
+}
+
 // Decode int24 from hex string (handles signed values)
 function decodeInt24(hex: string): number {
   const value = parseInt(hex, 16);
