@@ -8,6 +8,53 @@ import { searchPools, formatNumber, formatPrice } from '@/lib/api';
 import TokenLogo, { TokenPairLogos } from '@/components/TokenLogo';
 import { useTranslations, Translations } from '@/lib/i18n';
 
+// Get DEX display name with version (V2/V3/V4)
+function getDexDisplayName(dex: string, poolAddress: string): string {
+  const dexLower = dex.toLowerCase();
+
+  // Check if it's a Uniswap-based DEX
+  if (dexLower.includes('uniswap')) {
+    // V4 pools have 64-character hex ID (0x + 64 = 66 chars)
+    if (poolAddress.length === 66) {
+      return 'Uniswap V4';
+    }
+    // V2 is labeled as 'uniswapv2' or 'uniswap_v2'
+    if (dexLower.includes('v2') || dexLower.includes('_v2')) {
+      return 'Uniswap V2';
+    }
+    // Default to V3 for standard address format
+    return 'Uniswap V3';
+  }
+
+  // PancakeSwap versions
+  if (dexLower.includes('pancakeswap')) {
+    if (poolAddress.length === 66) {
+      return 'PancakeSwap V4';
+    }
+    if (dexLower.includes('v2') || dexLower.includes('_v2')) {
+      return 'PancakeSwap V2';
+    }
+    if (dexLower.includes('v3') || dexLower.includes('_v3')) {
+      return 'PancakeSwap V3';
+    }
+    return 'PancakeSwap';
+  }
+
+  // SushiSwap versions
+  if (dexLower.includes('sushiswap') || dexLower.includes('sushi')) {
+    if (dexLower.includes('v2') || dexLower.includes('_v2')) {
+      return 'SushiSwap V2';
+    }
+    if (dexLower.includes('v3') || dexLower.includes('_v3')) {
+      return 'SushiSwap V3';
+    }
+    return 'SushiSwap';
+  }
+
+  // For other DEXes, just capitalize first letter
+  return dex.charAt(0).toUpperCase() + dex.slice(1);
+}
+
 interface GroupedResults {
   query: string;
   results: SearchResult[];
@@ -221,7 +268,7 @@ function SearchResultItem({
           </span>
           <span className="text-xl" title={result.chainId}>{getChainIcon(result.chainId)}</span>
           <span className="text-xs text-gray-400 bg-[#0d1117] px-2 py-0.5 rounded">
-            {result.dex}
+            {getDexDisplayName(result.dex, result.poolAddress)}
           </span>
         </div>
         <p className="text-sm text-gray-400 truncate">
