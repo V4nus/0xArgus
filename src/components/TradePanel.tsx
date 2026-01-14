@@ -495,10 +495,29 @@ export default function TradePanel({
         await refetchAllowanceCow();
       } else {
         // Uniswap Universal Router: two-step approval via Permit2
-        const sellAmountWei = uniswapQuote?.sellAmount || '0';
+        const sellAmountWei = BigInt(uniswapQuote?.sellAmount || '0');
+
+        // First, refresh to get current allowance state
+        const tokenAllowanceResult = await refetchAllowanceTokenToPermit2();
+        const permit2AllowanceResult = await refetchPermit2Allowance();
+
+        // Check current allowances
+        const currentTokenAllowance = tokenAllowanceResult.data ? BigInt(tokenAllowanceResult.data as bigint) : BigInt(0);
+        const currentPermit2Data = permit2AllowanceResult.data as [bigint, number, number] | undefined;
+        const currentPermit2Allowance = currentPermit2Data ? currentPermit2Data[0] : BigInt(0);
+        const currentExpiration = currentPermit2Data ? currentPermit2Data[1] : 0;
+        const isExpired = currentExpiration > 0 && currentExpiration < Math.floor(Date.now() / 1000);
+
+        console.log('Current allowances before approve:', {
+          tokenAllowance: currentTokenAllowance.toString(),
+          permit2Allowance: currentPermit2Allowance.toString(),
+          expiration: currentExpiration,
+          isExpired,
+          sellAmount: sellAmountWei.toString(),
+        });
 
         // Step 1: Approve Token to Permit2 (if needed)
-        if (needsTokenToPermit2Approval) {
+        if (currentTokenAllowance < sellAmountWei) {
           console.log('Step 1: Approving Token to Permit2...');
           await writeContractAsync({
             address: sellTokenAddress as `0x${string}`,
@@ -509,10 +528,12 @@ export default function TradePanel({
           await new Promise(resolve => setTimeout(resolve, 3000));
           await refetchAllowanceTokenToPermit2();
           console.log('Step 1 complete');
+        } else {
+          console.log('Step 1 skipped - already approved');
         }
 
         // Step 2: Approve Universal Router on Permit2 (if needed)
-        if (needsPermit2ToRouterApproval) {
+        if (currentPermit2Allowance < sellAmountWei || isExpired) {
           console.log('Step 2: Approving Universal Router on Permit2...');
           await writeContractAsync({
             address: permit2Address,
@@ -528,10 +549,14 @@ export default function TradePanel({
           await new Promise(resolve => setTimeout(resolve, 3000));
           await refetchPermit2Allowance();
           console.log('Step 2 complete');
+        } else {
+          console.log('Step 2 skipped - already approved');
         }
 
-        // Final refresh
-        await refetchAllowanceUniswap();
+        // Final refresh to update UI
+        await refetchAllowanceTokenToPermit2();
+        await refetchPermit2Allowance();
+        console.log('All approvals complete');
       }
     } catch (error) {
       console.error('Approval error:', error);
