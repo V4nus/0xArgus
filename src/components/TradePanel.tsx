@@ -478,11 +478,11 @@ export default function TradePanel({
     try {
 
       // Execute the swap directly on-chain
+      // Don't specify gas - let the wallet estimate it
       const txHash = await sendTransactionAsync({
         to: uniswapQuote.to as `0x${string}`,
         data: uniswapQuote.data as `0x${string}`,
         value: BigInt(uniswapQuote.value || '0'),
-        gas: BigInt(uniswapQuote.estimatedGas),
       });
 
       setOrderId(txHash);
