@@ -245,7 +245,7 @@ export const translations: Record<Language, Translations> = {
       unableGetQuote: 'Unable to get quote',
     },
     tradeHistory: {
-      title: 'Trade History',
+      title: 'Transactions',
       trades: 'trades',
       noTrades: 'No trades yet',
       loadingTrades: 'Loading trades...',
@@ -375,7 +375,7 @@ export const translations: Record<Language, Translations> = {
       unableGetQuote: '견적을 가져올 수 없습니다',
     },
     tradeHistory: {
-      title: '거래 내역',
+      title: '트랜잭션',
       trades: '거래',
       noTrades: '거래 없음',
       loadingTrades: '거래 로딩 중...',
@@ -505,7 +505,7 @@ export const translations: Record<Language, Translations> = {
       unableGetQuote: '見積を取得できません',
     },
     tradeHistory: {
-      title: '取引履歴',
+      title: 'トランザクション',
       trades: '取引',
       noTrades: '取引なし',
       loadingTrades: '取引を読み込み中...',
@@ -635,7 +635,7 @@ export const translations: Record<Language, Translations> = {
       unableGetQuote: 'No se puede obtener cotización',
     },
     tradeHistory: {
-      title: 'Historial de Trading',
+      title: 'Transacciones',
       trades: 'operaciones',
       noTrades: 'Sin operaciones',
       loadingTrades: 'Cargando operaciones...',
@@ -765,7 +765,7 @@ export const translations: Record<Language, Translations> = {
       unableGetQuote: 'Não foi possível obter cotação',
     },
     tradeHistory: {
-      title: 'Histórico de Trading',
+      title: 'Transações',
       trades: 'trades',
       noTrades: 'Sem trades',
       loadingTrades: 'Carregando trades...',
@@ -895,7 +895,7 @@ export const translations: Record<Language, Translations> = {
       unableGetQuote: 'Не удается получить котировку',
     },
     tradeHistory: {
-      title: 'История торгов',
+      title: 'Транзакции',
       trades: 'сделок',
       noTrades: 'Нет сделок',
       loadingTrades: 'Загрузка сделок...',

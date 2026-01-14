@@ -4,8 +4,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { PoolInfo } from '@/types';
 import { formatNumber, formatPercentage } from '@/lib/api';
-import { ArrowLeft, ExternalLink, Copy, Check, Star } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, ExternalLink, Copy, Check, Star, GripHorizontal } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import TokenLogo, { TokenPairLogos } from '@/components/TokenLogo';
 import { isFavorite, toggleFavorite } from '@/lib/favorites';
 import FavoritesSidebar from '@/components/FavoritesSidebar';
@@ -64,6 +64,51 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [tradeEffect, setTradeEffect] = useState<'buy' | 'sell' | null>(null);
   const priceChangeColor = pool.priceChange24h >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
+
+  // Resizable panel state - percentage for chart height (transactions takes the rest)
+  const [chartHeightPercent, setChartHeightPercent] = useState(65); // Default: 65% chart, 35% transactions
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+
+  // Handle drag for resizing
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current || !containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const relativeY = e.clientY - containerRect.top;
+      const containerHeight = containerRect.height;
+
+      // Calculate percentage (min 30%, max 85%)
+      let newPercent = (relativeY / containerHeight) * 100;
+      newPercent = Math.max(30, Math.min(85, newPercent));
+
+      setChartHeightPercent(newPercent);
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // Handle trade success - trigger chart beam effect
   const handleTradeSuccess = useCallback((tradeType: 'buy' | 'sell') => {
@@ -218,10 +263,13 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
 
       {/* Main content: Chart | Swap | Order Book horizontal layout */}
       <main className="flex-1 p-2 flex flex-col lg:flex-row gap-2 overflow-auto">
-        {/* Left: Chart + Trade History stacked */}
-        <div className="flex-1 flex flex-col gap-2 min-w-0">
-          {/* Chart - takes most of the vertical space */}
-          <div className="h-[300px] sm:h-[350px] lg:flex-1 lg:min-h-[400px] bg-[#161b22] rounded-lg border border-[#30363d] overflow-hidden">
+        {/* Left: Chart + Transactions stacked with resizable divider */}
+        <div ref={containerRef} className="flex-1 flex flex-col min-w-0 min-h-[500px] lg:min-h-0">
+          {/* Chart - dynamic height based on chartHeightPercent */}
+          <div
+            className="bg-[#161b22] rounded-lg border border-[#30363d] overflow-hidden flex-shrink-0"
+            style={{ height: `calc(${chartHeightPercent}% - 6px)` }}
+          >
             <Chart
               chainId={pool.chainId}
               poolAddress={pool.poolAddress}
@@ -232,8 +280,21 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
             />
           </div>
 
-          {/* Trade History - below chart */}
-          <div className="h-[200px] sm:h-[250px] lg:h-[280px] flex-shrink-0">
+          {/* Resizable divider - drag handle */}
+          <div
+            onMouseDown={handleMouseDown}
+            className="h-3 flex items-center justify-center cursor-row-resize group hover:bg-[#30363d]/50 transition-colors flex-shrink-0 select-none"
+          >
+            <div className="flex items-center gap-0.5">
+              <GripHorizontal size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+            </div>
+          </div>
+
+          {/* Transactions - takes remaining space */}
+          <div
+            className="flex-1 min-h-[150px]"
+            style={{ height: `calc(${100 - chartHeightPercent}% - 6px)` }}
+          >
             <TradeHistory
               chainId={pool.chainId}
               poolAddress={pool.poolAddress}
