@@ -52,6 +52,7 @@ const LOCAL_TOKEN_ICONS: Record<string, string> = {
 // Priority: Local > DexScreener CDN > CoinGecko
 const TOKEN_ICONS: Record<string, string> = {
   // Base tokens - using DexScreener/verified URLs
+  PING: 'https://dd.dexscreener.com/ds-data/tokens/base/0xb7e04DEE3Ee60F5990Ea34C4E5Cc816ac87E8e63.png',
   TOSHI: 'https://dd.dexscreener.com/ds-data/tokens/base/0xac1bd2486aaf3b5c0fc3fd868558b082a531b2b4.png',
   VIRTUAL: 'https://dd.dexscreener.com/ds-data/tokens/base/0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b.png',
   WELL: 'https://dd.dexscreener.com/ds-data/tokens/base/0xa88594d404727625a9437c3f886c7643872296ae.png',
@@ -104,6 +105,7 @@ const getFallbackIcons = (symbol: string): string[] => {
 // Token contract addresses for icon caching
 const TOKEN_ADDRESSES: Record<string, { chain: string; address: string }> = {
   // Base tokens
+  PING: { chain: 'base', address: '0xb7e04DEE3Ee60F5990Ea34C4E5Cc816ac87E8e63' },
   DEGEN: { chain: 'base', address: '0x4ed4e862860bed51a9570b96d89af5e1b0efefed' },
   BRETT: { chain: 'base', address: '0x532f27101965dd16442e59d40670faf5ebb142e4' },
   TOSHI: { chain: 'base', address: '0xac1bd2486aaf3b5c0fc3fd868558b082a531b2b4' },
@@ -149,18 +151,20 @@ const TOKEN_ADDRESSES: Record<string, { chain: string; address: string }> = {
   ENS: { chain: 'ethereum', address: '0xc18360217d8f7ab5e7c516566761ea12ce7f9d72' },
 };
 
-// Get token logo - prefers local, then uses server-cached API
+// Get token logo - uses local icons first, then DexScreener CDN
+// Browser can access DexScreener CDN directly without issues
 const getPoolLogo = (symbol: string): string => {
-  // First check local icons (fastest)
+  // First check local static icons (for manually cached icons)
   if (LOCAL_TOKEN_ICONS[symbol]) {
     return LOCAL_TOKEN_ICONS[symbol];
   }
-  // Use server-cached API for tokens with known addresses
+  // Use DexScreener CDN URL directly for tokens with known addresses
+  // Browser-side loading doesn't have the server-side connection issues
   const tokenInfo = TOKEN_ADDRESSES[symbol];
   if (tokenInfo) {
-    return `/api/token-icon?chain=${tokenInfo.chain}&address=${tokenInfo.address}`;
+    return `https://dd.dexscreener.com/ds-data/tokens/${tokenInfo.chain}/${tokenInfo.address.toLowerCase()}.png`;
   }
-  // Fallback to hardcoded DexScreener URLs
+  // Fallback to pre-configured DexScreener URLs
   if (TOKEN_ICONS[symbol]) {
     return TOKEN_ICONS[symbol];
   }
@@ -173,7 +177,7 @@ const ALL_POOLS = [
   {
     rank: 1, symbol: 'PING', name: 'Ping', pair: 'PING/USDC', chain: 'base', chainLabel: 'Base',
     poolAddress: '0x98c8f03094a9e65ccedc14c40130e4a5dd0ce14fb12ea58cbeac11f662b458b9',
-    logo: 'https://dd.dexscreener.com/ds-data/tokens/base/0xb7e04DEE3Ee60F5990Ea34C4E5Cc816ac87E8e63.png', dex: 'uniswap', version: 'V4',
+    logo: getPoolLogo('PING'), dex: 'uniswap', version: 'V4',
     price: 0.008356, change24h: 12.5, volume24h: 8500000, liquidity: 2800000, mcap: 52000000, liquidityRatio: 5.4,
   },
   {
@@ -625,14 +629,16 @@ function PoolRow({ pool, t }: { pool: typeof ALL_POOLS[0]; t: ReturnType<typeof 
       {/* Pool Info */}
       <div className="col-span-10 sm:col-span-3 flex items-center gap-3">
         {!showFallback && imgSrc ? (
-          <img
-            src={imgSrc}
-            alt={pool.symbol}
-            className="w-8 h-8 rounded-full object-cover"
-            onError={handleImageError}
-          />
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-[#21262d] flex-shrink-0">
+            <img
+              src={imgSrc}
+              alt={pool.symbol}
+              className="w-full h-full object-cover"
+              onError={handleImageError}
+            />
+          </div>
         ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
             {pool.symbol[0]}
           </div>
         )}
