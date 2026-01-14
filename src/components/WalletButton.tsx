@@ -6,13 +6,11 @@ import { formatUnits, erc20Abi } from 'viem';
 import { CHAIN_ID_MAP } from '@/lib/wagmi';
 import { formatNumber } from '@/lib/api';
 
-// Wallet icons (SVG data URIs for common wallets)
+// Wallet icons - using official logos from public folder
 const WALLET_ICONS: Record<string, string> = {
-  metaMask: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjcuMiA0TDE3LjYgMTEuMkwxOS40IDdMMjcuMiA0WiIgZmlsbD0iI0U4ODIxRSIvPjxwYXRoIGQ9Ik00LjggNEwxNC40IDExLjJMMTIuNiA3TDQuOCA0WiIgZmlsbD0iI0U4ODIxRSIvPjwvc3ZnPg==',
-  okx: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9ImJsYWNrIi8+PHJlY3QgeD0iNiIgeT0iNiIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOCIgeT0iNiIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSI2IiB5PSIxOCIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOCIgeT0iMTgiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IndoaXRlIi8+PC9zdmc+',
-  binance: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iI0YzQkEyRiIvPjxwYXRoIGQ9Ik0xNiA3TDEyLjUgMTAuNUwxNC41IDEyLjVMMTYgMTFMMTcuNSAxMi41TDE5LjUgMTAuNUwxNiA3WiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=',
-  coinbase: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzAwNTJGRiIvPjxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjgiIGZpbGw9IndoaXRlIi8+PC9zdmc+',
-  walletConnect: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzMzOThGRiIvPjxwYXRoIGQ9Ik0xMCAxM0MxMyAxMCAxOSAxMCAyMiAxM0wxNiAxOUwxMCAxM1oiIGZpbGw9IndoaXRlIi8+PC9zdmc+',
+  metaMask: '/wallets/metamask.svg',
+  okx: '/wallets/okx.svg',
+  binance: '/wallets/binance.svg',
 };
 
 // Native token symbols per chain
