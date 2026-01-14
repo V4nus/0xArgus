@@ -275,41 +275,6 @@ export default function OceanBackground() {
     ocean.position.y = 0;
     scene.add(ocean);
 
-    // Spray particles for realism
-    const sprayCount = 3000;
-    const sprayGeometry = new THREE.BufferGeometry();
-    const sprayPositions = new Float32Array(sprayCount * 3);
-    const spraySizes = new Float32Array(sprayCount);
-    const sprayVelocities: { x: number; y: number; z: number; life: number }[] = [];
-
-    for (let i = 0; i < sprayCount; i++) {
-      sprayPositions[i * 3] = (Math.random() - 0.5) * 200;
-      sprayPositions[i * 3 + 1] = Math.random() * 15 + 5;
-      sprayPositions[i * 3 + 2] = Math.random() * 100 - 50;
-      spraySizes[i] = Math.random() * 3 + 1;
-      sprayVelocities.push({
-        x: (Math.random() - 0.5) * 0.3,
-        y: Math.random() * 0.2 + 0.1,
-        z: (Math.random() - 0.5) * 0.2,
-        life: Math.random(),
-      });
-    }
-
-    sprayGeometry.setAttribute('position', new THREE.BufferAttribute(sprayPositions, 3));
-    sprayGeometry.setAttribute('size', new THREE.BufferAttribute(spraySizes, 1));
-
-    const sprayMaterial = new THREE.PointsMaterial({
-      size: 0.8,
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.7,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
-    const spray = new THREE.Points(sprayGeometry, sprayMaterial);
-    scene.add(spray);
-
     // Lighting
     const ambientLight = new THREE.AmbientLight(0x88bbdd, 0.6);
     scene.add(ambientLight);
@@ -340,31 +305,6 @@ export default function OceanBackground() {
       // Update ocean shader time
       oceanMaterial.uniforms.uTime.value = elapsedTime;
 
-      // Animate spray particles
-      const sprayPos = spray.geometry.attributes.position.array as Float32Array;
-      for (let i = 0; i < sprayCount; i++) {
-        const vel = sprayVelocities[i];
-
-        sprayPos[i * 3] += vel.x;
-        sprayPos[i * 3 + 1] += vel.y;
-        sprayPos[i * 3 + 2] += vel.z;
-
-        vel.y -= 0.015; // Gravity
-        vel.life -= 0.008;
-
-        // Reset particle
-        if (vel.life <= 0 || sprayPos[i * 3 + 1] < 0) {
-          sprayPos[i * 3] = (Math.random() - 0.5) * 200;
-          sprayPos[i * 3 + 1] = Math.random() * 5 + 8;
-          sprayPos[i * 3 + 2] = Math.random() * 60 - 30;
-          vel.x = (Math.random() - 0.5) * 0.4;
-          vel.y = Math.random() * 0.3 + 0.2;
-          vel.z = (Math.random() - 0.5) * 0.3;
-          vel.life = Math.random() * 0.5 + 0.5;
-        }
-      }
-      spray.geometry.attributes.position.needsUpdate = true;
-
       // Subtle camera bob (like floating on water)
       camera.position.y = 3 + Math.sin(elapsedTime * 0.5) * 0.5 + Math.sin(elapsedTime * 0.8) * 0.3;
       camera.position.x = Math.sin(elapsedTime * 0.2) * 2;
@@ -383,8 +323,6 @@ export default function OceanBackground() {
       renderer.dispose();
       oceanGeometry.dispose();
       oceanMaterial.dispose();
-      sprayGeometry.dispose();
-      sprayMaterial.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
