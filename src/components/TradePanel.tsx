@@ -472,10 +472,28 @@ export default function TradePanel({
   const handleUniswapTrade = async () => {
     if (!uniswapQuote || !address) return;
 
+    // Double-check approvals before executing
+    if (needsApprovalUniswap) {
+      console.error('Approvals not complete:', {
+        needsTokenToPermit2Approval,
+        needsPermit2ToRouterApproval,
+        allowanceTokenToPermit2: allowanceTokenToPermit2?.toString(),
+        allowancePermit2ToRouter: allowancePermit2ToRouter.toString(),
+        sellAmount: uniswapQuote.sellAmount,
+      });
+      setTradeError('Please complete token approval first');
+      return;
+    }
+
     setTradeStatus('submitting');
     setTradeError(null);
 
     try {
+      console.log('Executing Uniswap trade:', {
+        to: uniswapQuote.to,
+        value: uniswapQuote.value,
+        dataLength: uniswapQuote.data.length,
+      });
 
       // Execute the swap directly on-chain
       // Don't specify gas - let the wallet estimate it
