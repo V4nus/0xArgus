@@ -1,18 +1,55 @@
 import { http, createConfig } from 'wagmi';
 import { mainnet, base, arbitrum, polygon, bsc } from 'wagmi/chains';
-import { walletConnect } from 'wagmi/connectors';
+import { injected } from 'wagmi/connectors';
 
-// WalletConnect project ID - you should get your own at https://cloud.walletconnect.com
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo';
+// Custom wallet connectors for MetaMask, OKX Wallet, Binance Wallet
+// These use injected providers (window.ethereum, window.okxwallet, window.BinanceChain)
+
+// MetaMask connector
+const metaMaskConnector = () => injected({
+  target: 'metaMask',
+});
+
+// OKX Wallet connector
+const okxWalletConnector = () => injected({
+  target() {
+    if (typeof window === 'undefined') return undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const provider = (window as any).okxwallet;
+    if (!provider) return undefined;
+    return {
+      id: 'okxWallet',
+      name: 'OKX Wallet',
+      provider,
+    };
+  },
+});
+
+// Binance Wallet connector
+const binanceWalletConnector = () => injected({
+  target() {
+    if (typeof window === 'undefined') return undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const provider = (window as any).BinanceChain;
+    if (!provider) return undefined;
+    return {
+      id: 'binanceWallet',
+      name: 'Binance Wallet',
+      provider,
+    };
+  },
+});
 
 // Wallet connectors configuration
-// Uses EIP-6963 for automatic wallet discovery (MetaMask, OKX, Binance, Coinbase, etc.)
-// All modern wallets that support EIP-6963 will be auto-detected
 export const config = createConfig({
   chains: [mainnet, base, arbitrum, polygon, bsc],
   connectors: [
-    // WalletConnect for mobile wallets and QR code scanning
-    walletConnect({ projectId }),
+    // MetaMask
+    metaMaskConnector(),
+    // OKX Wallet
+    okxWalletConnector(),
+    // Binance Wallet
+    binanceWalletConnector(),
   ],
   transports: {
     [mainnet.id]: http(),
@@ -21,9 +58,8 @@ export const config = createConfig({
     [polygon.id]: http(),
     [bsc.id]: http(),
   },
-  // Enable EIP-6963 multi-injected provider discovery
-  // This automatically detects: MetaMask, OKX Wallet, Binance Wallet, Coinbase Wallet, etc.
-  multiInjectedProviderDiscovery: true,
+  // Disable auto-discovery to only show our specified wallets
+  multiInjectedProviderDiscovery: false,
 });
 
 // Chain ID mapping from our chainId strings to wagmi chain IDs
