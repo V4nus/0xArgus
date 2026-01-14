@@ -360,8 +360,8 @@ export default function LiquidityDepth({
 
     if (chainId !== 'solana') {
       fetchData();
-      // Update every 1 second for real-time feel (like Binance)
-      const interval = setInterval(fetchData, 1000);
+      // Update every 3 seconds (API has 5-second cache, so this balances freshness vs performance)
+      const interval = setInterval(fetchData, 3000);
       return () => clearInterval(interval);
     } else {
       setError('Solana not supported yet');

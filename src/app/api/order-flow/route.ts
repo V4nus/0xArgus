@@ -11,6 +11,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, parseAbi, encodeFunctionData, decodeFunctionResult } from 'viem';
 import { base } from 'viem/chains';
 
+// Cache for order flow data (5 second TTL for faster perceived updates)
+interface CacheEntry {
+  data: unknown;
+  timestamp: number;
+}
+const orderFlowCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5000; // 5 seconds cache
+
 interface OrderFlowLevel {
   price: number;
   priceUpper: number;
@@ -160,6 +168,13 @@ export async function GET(request: NextRequest) {
       { error: 'Only V4 pool IDs (64 hex chars) are supported' },
       { status: 400 }
     );
+  }
+
+  // Check cache first
+  const cacheKey = `${chainId}-${poolAddress}-${maxLevels}-${precision}`;
+  const cached = orderFlowCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return NextResponse.json(cached.data);
   }
 
   try {
@@ -527,7 +542,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Order Flow] Result: ${limitedBids.length} bids (${totalBidUsdc.toFixed(2)} USDC), ${limitedAsks.length} asks (${totalAskPing.toFixed(2)} PING)`);
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: {
         bids: limitedBids,
@@ -549,7 +564,21 @@ export async function GET(request: NextRequest) {
         },
         source: 'real_tick_data',
       },
+    };
+
+    // Save to cache
+    orderFlowCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now(),
     });
+
+    // Clean old cache entries (keep max 100 entries)
+    if (orderFlowCache.size > 100) {
+      const oldestKey = orderFlowCache.keys().next().value;
+      if (oldestKey) orderFlowCache.delete(oldestKey);
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('[Order Flow] Error:', error);
     return NextResponse.json(
