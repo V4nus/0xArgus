@@ -1,4 +1,4 @@
-import { createPublicClient, http, formatUnits, parseAbi } from 'viem';
+import { createPublicClient, http, formatUnits, parseAbi, encodeFunctionData, decodeFunctionResult } from 'viem';
 import { base, mainnet, bsc, arbitrum, polygon } from 'viem/chains';
 
 // Simple in-memory cache
@@ -97,7 +97,41 @@ const V3_POOL_ABI = parseAbi([
   'function token0() view returns (address)',
   'function token1() view returns (address)',
   'function ticks(int24 tick) view returns (uint128 liquidityGross, int128 liquidityNet, uint256 feeGrowthOutside0X128, uint256 feeGrowthOutside1X128, int56 tickCumulativeOutside, uint160 secondsPerLiquidityOutsideX128, uint32 secondsOutside, bool initialized)',
+  'function tickBitmap(int16 wordPosition) view returns (uint256)',
 ]);
+
+// Multicall3 ABI for efficient batch calls
+const MULTICALL3_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: 'target', type: 'address' },
+          { name: 'allowFailure', type: 'bool' },
+          { name: 'callData', type: 'bytes' },
+        ],
+        name: 'calls',
+        type: 'tuple[]',
+      },
+    ],
+    name: 'aggregate3',
+    outputs: [
+      {
+        components: [
+          { name: 'success', type: 'bool' },
+          { name: 'returnData', type: 'bytes' },
+        ],
+        name: 'returnData',
+        type: 'tuple[]',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
+// Multicall3 address (same on all EVM chains)
+const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11';
 
 // Uniswap V4 PoolManager ABI (minimal for state queries)
 const V4_POOL_MANAGER_ABI = parseAbi([
@@ -670,11 +704,11 @@ export async function getLiquidityDepth(
 
     const client = createPublicClient({
       chain,
-      transport: http(rpcUrl, { timeout: 10000 }), // 10 second timeout
+      transport: http(rpcUrl, { timeout: 30000 }), // 30 second timeout for multicall
     });
 
     // Get pool data
-    const [slot0, liquidity, tickSpacing, token0Addr, token1Addr] = await Promise.all([
+    const [slot0, poolLiquidity, tickSpacingRaw, token0Addr, token1Addr] = await Promise.all([
       client.readContract({
         address: poolAddress as `0x${string}`,
         abi: V3_POOL_ABI,
@@ -703,6 +737,7 @@ export async function getLiquidityDepth(
     ]);
 
     const [sqrtPriceX96, currentTick] = slot0 as unknown as [bigint, number, ...unknown[]];
+    const tickSpacing = Number(tickSpacingRaw);
 
     // Get token info
     const [decimals0, decimals1, symbol0, symbol1] = await Promise.all([
@@ -712,59 +747,10 @@ export async function getLiquidityDepth(
       client.readContract({ address: token1Addr as `0x${string}`, abi: ERC20_ABI, functionName: 'symbol' }),
     ]);
 
-    // currentPrice from sqrtPriceX96 = token1/token0 ratio (in smallest units, then adjusted for decimals)
-    const currentPrice = sqrtPriceX96ToPrice(sqrtPriceX96, Number(decimals0), Number(decimals1));
+    const dec0 = Number(decimals0);
+    const dec1 = Number(decimals1);
 
-    // Get actual pool reserves (token balances in the pool contract)
-    let poolToken0Balance = 0;
-    let poolToken1Balance = 0;
-    try {
-      const [balance0, balance1] = await Promise.all([
-        client.readContract({
-          address: token0Addr as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'balanceOf',
-          args: [poolAddress as `0x${string}`],
-        }),
-        client.readContract({
-          address: token1Addr as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'balanceOf',
-          args: [poolAddress as `0x${string}`],
-        }),
-      ]);
-      poolToken0Balance = Number(balance0 as bigint) / 10 ** Number(decimals0);
-      poolToken1Balance = Number(balance1 as bigint) / 10 ** Number(decimals1);
-    } catch (e) {
-      console.warn('Failed to get pool balances, using liquidity estimate:', e);
-    }
-
-    // In V3, token0 is always the token with the lower address
-    // But DexScreener's base token might be either token0 or token1
-    // priceUsd is always the USD price of the base token
-    // currentPrice from sqrtPriceX96 is token1/token0 ratio
-
-    // We need to figure out which V3 token corresponds to the "base" token
-    // The base token is what's being traded, the quote token is what you pay with
-
-    // Calculate what token1 would be worth in USD if token0 is base:
-    // If 1 token0 = priceUsd USD, and 1 token0 = currentPrice token1
-    // Then 1 token1 = priceUsd / currentPrice USD
-    const token1UsdIfToken0IsBase = currentPrice > 0 ? priceUsd / currentPrice : 0;
-
-    // Estimate total pool value both ways to determine which makes more sense
-    const totalUsdIfToken0IsBase = poolToken0Balance * priceUsd + poolToken1Balance * token1UsdIfToken0IsBase;
-
-    // If token1 is base, then: 1 token1 = priceUsd USD, 1 token0 = priceUsd * currentPrice USD
-    const token0UsdIfToken1IsBase = priceUsd * currentPrice;
-    const totalUsdIfToken1IsBase = poolToken0Balance * token0UsdIfToken1IsBase + poolToken1Balance * priceUsd;
-
-    // Determine which token is base by checking which gives a reasonable quote token USD price
-    // Common quote tokens (WETH, USDC, etc.) have known USD values
-    // If token1UsdIfToken0IsBase is close to known prices (e.g., ~3000 for WETH), token0 is likely base
-    // If token0UsdIfToken1IsBase is close to known prices, token1 is likely base
-
-    // Known quote token prices (approximate)
+    // Determine base/quote tokens using known quote tokens
     const knownQuotePrices: Record<string, number> = {
       'WETH': 3500, 'ETH': 3500,
       'USDC': 1, 'USDT': 1, 'DAI': 1,
@@ -773,150 +759,264 @@ export async function getLiquidityDepth(
 
     const symbol0Upper = (symbol0 as string).toUpperCase();
     const symbol1Upper = (symbol1 as string).toUpperCase();
-
-    // Check if either token is a known quote token
     const token0IsKnownQuote = symbol0Upper in knownQuotePrices;
     const token1IsKnownQuote = symbol1Upper in knownQuotePrices;
 
     let isToken0Base: boolean;
-
     if (token1IsKnownQuote && !token0IsKnownQuote) {
-      // token1 is a known quote token (like WETH), so token0 is base
       isToken0Base = true;
     } else if (token0IsKnownQuote && !token1IsKnownQuote) {
-      // token0 is a known quote token (like WETH), so token1 is base
       isToken0Base = false;
     } else {
-      // Neither or both are known quote tokens, use price comparison
-      // The token with lower USD price is likely the base (meme coins are cheap)
-      isToken0Base = priceUsd < 1; // If priceUsd is very small, it's probably a meme coin = base
+      isToken0Base = priceUsd < 1;
     }
 
-    console.log('V3 token analysis:', {
-      token0: symbol0,
-      token1: symbol1,
-      poolToken0Balance,
-      poolToken1Balance,
-      currentPrice,
-      priceUsd,
-      token1UsdIfToken0IsBase,
-      token0UsdIfToken1IsBase,
-      totalUsdIfToken0IsBase,
-      totalUsdIfToken1IsBase,
-      isToken0Base,
+    // Calculate decimal adjustment for price conversion
+    // decimalAdjust = priceUsd * 1.0001^currentTick (for tick -> price conversion)
+    const decimalAdjust = priceUsd > 0 ? priceUsd * Math.pow(1.0001, currentTick) : 1e12;
+
+    // Helper: convert tick to USD price
+    const tickToPriceUsd = (tick: number): number => {
+      const safeTick = Math.max(-887272, Math.min(887272, tick));
+      const price = decimalAdjust / Math.pow(1.0001, safeTick);
+      if (!isFinite(price) || price > 1e18) return 1e18;
+      if (price < 1e-18) return 1e-18;
+      return price;
+    };
+
+    console.log(`[V3 Depth] Pool: tick=${currentTick}, L=${poolLiquidity}, tickSpacing=${tickSpacing}`);
+
+    // Query tick bitmap to find initialized ticks
+    // Bitmap word position = tick / tickSpacing / 256
+    const MIN_TICK = -887272;
+    const MAX_TICK = 887272;
+    const minWord = Math.floor(MIN_TICK / tickSpacing / 256);
+    const maxWord = Math.ceil(MAX_TICK / tickSpacing / 256);
+
+    // Build bitmap query calls
+    const bitmapCalls = [];
+    for (let wordPos = minWord; wordPos <= maxWord; wordPos++) {
+      bitmapCalls.push({
+        target: poolAddress as `0x${string}`,
+        allowFailure: true,
+        callData: encodeFunctionData({
+          abi: V3_POOL_ABI,
+          functionName: 'tickBitmap',
+          args: [wordPos],
+        }),
+      });
+    }
+
+    // Execute bitmap multicall
+    const bitmapResults = await client.readContract({
+      address: MULTICALL3 as `0x${string}`,
+      abi: MULTICALL3_ABI,
+      functionName: 'aggregate3',
+      args: [bitmapCalls],
+    }) as Array<{ success: boolean; returnData: `0x${string}` }>;
+
+    // Parse bitmaps to find initialized ticks
+    const initializedTicks: number[] = [];
+    bitmapResults.forEach((res, wordIndex) => {
+      if (res.success && res.returnData !== '0x' && res.returnData !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        const wordPos = minWord + wordIndex;
+        const bitmap = BigInt(res.returnData);
+
+        for (let bit = 0; bit < 256; bit++) {
+          if ((bitmap >> BigInt(bit)) & 1n) {
+            const tick = (wordPos * 256 + bit) * tickSpacing;
+            if (tick >= MIN_TICK && tick <= MAX_TICK) {
+              initializedTicks.push(tick);
+            }
+          }
+        }
+      }
     });
 
-    // Set up base/quote variables based on which token is base
-    let baseBalance: number, quoteBalance: number;
-    let baseSymbol: string, quoteSymbol: string;
-    let quoteUsdPrice: number;
+    initializedTicks.sort((a, b) => a - b);
+    console.log(`[V3 Depth] Found ${initializedTicks.length} initialized ticks`);
 
-    if (isToken0Base) {
-      // token0 is base, token1 is quote
-      baseBalance = poolToken0Balance;
-      quoteBalance = poolToken1Balance;
-      baseSymbol = symbol0 as string;
-      quoteSymbol = symbol1 as string;
-      quoteUsdPrice = token1UsdIfToken0IsBase;
-    } else {
-      // token1 is base, token0 is quote
-      baseBalance = poolToken1Balance;
-      quoteBalance = poolToken0Balance;
-      baseSymbol = symbol1 as string;
-      quoteSymbol = symbol0 as string;
-      quoteUsdPrice = token0UsdIfToken1IsBase;
+    // Query liquidityNet for each initialized tick using multicall
+    const tickLiquidityMap = new Map<number, bigint>();
+
+    if (initializedTicks.length > 0) {
+      const tickCalls = initializedTicks.map(tick => ({
+        target: poolAddress as `0x${string}`,
+        allowFailure: true,
+        callData: encodeFunctionData({
+          abi: V3_POOL_ABI,
+          functionName: 'ticks',
+          args: [tick],
+        }),
+      }));
+
+      const tickResults = await client.readContract({
+        address: MULTICALL3 as `0x${string}`,
+        abi: MULTICALL3_ABI,
+        functionName: 'aggregate3',
+        args: [tickCalls],
+      }) as Array<{ success: boolean; returnData: `0x${string}` }>;
+
+      tickResults.forEach((res, index) => {
+        if (res.success && res.returnData !== '0x') {
+          try {
+            const decoded = decodeFunctionResult({
+              abi: V3_POOL_ABI,
+              functionName: 'ticks',
+              data: res.returnData,
+            }) as unknown as [bigint, bigint, bigint, bigint, bigint, bigint, number, boolean];
+            const liquidityNet = decoded[1]; // Second return value is liquidityNet
+            tickLiquidityMap.set(initializedTicks[index], liquidityNet);
+          } catch {
+            // Skip invalid results
+          }
+        }
+      });
     }
 
-    // Generate synthetic liquidity levels based on actual pool reserves
+    // Calculate token amounts from liquidity
+    const calculateToken0Amount = (L: bigint, tickLower: number, tickUpper: number): number => {
+      const sqrtPriceLower = Math.pow(1.0001, tickLower / 2);
+      const sqrtPriceUpper = Math.pow(1.0001, tickUpper / 2);
+      if (!isFinite(sqrtPriceLower) || !isFinite(sqrtPriceUpper) || sqrtPriceLower === 0 || sqrtPriceUpper === 0) return 0;
+      const deltaInvSqrt = 1 / sqrtPriceLower - 1 / sqrtPriceUpper;
+      if (!isFinite(deltaInvSqrt)) return 0;
+      const amount = Number(L) * deltaInvSqrt / (10 ** dec0);
+      return isFinite(amount) && amount > 0 ? amount : 0;
+    };
+
+    const calculateToken1Amount = (L: bigint, tickLower: number, tickUpper: number): number => {
+      const sqrtPriceLower = Math.pow(1.0001, tickLower / 2);
+      const sqrtPriceUpper = Math.pow(1.0001, tickUpper / 2);
+      if (!isFinite(sqrtPriceLower) || !isFinite(sqrtPriceUpper)) return 0;
+      const deltaSqrt = sqrtPriceUpper - sqrtPriceLower;
+      if (!isFinite(deltaSqrt)) return 0;
+      const amount = Number(L) * deltaSqrt / (10 ** dec1);
+      return isFinite(amount) && amount > 0 ? amount : 0;
+    };
+
+    // Build order book from tick data
     const bids: LiquidityLevel[] = [];
     const asks: LiquidityLevel[] = [];
 
-    // Use priceUsd for level prices (USD price of base token)
-    const displayPrice = priceUsd > 0 ? priceUsd : 1;
+    const allTicks = Array.from(tickLiquidityMap.keys()).sort((a, b) => a - b);
+    const ticksAbove = allTicks.filter(t => t > currentTick);
+    const ticksBelow = allTicks.filter(t => t <= currentTick).reverse(); // Descending
 
-    // Calculate total USD value of pool reserves
-    const totalPoolUsd = baseBalance * priceUsd + quoteBalance * quoteUsdPrice;
+    // Get quote token USD price for liquidity USD calculation
+    const currentPriceRatio = sqrtPriceX96ToPrice(sqrtPriceX96, dec0, dec1);
+    const quoteUsdPrice = isToken0Base ? (currentPriceRatio > 0 ? priceUsd / currentPriceRatio : 0) : priceUsd * currentPriceRatio;
 
-    // Generate 50 levels for each side using percentage-based distribution
-    const maxPct = levels;
-    const numLevels = 50;
+    // ASKS: price goes UP (tick increases) - sell base token, receive quote token
+    // Traverse from current tick upward
+    let askLiquidity = poolLiquidity as bigint;
+    let prevTickAbove = currentTick;
 
-    for (let i = 1; i <= numLevels; i++) {
-      const ratio = i / numLevels;
-      const pct = maxPct * Math.pow(ratio, 1.5) / 100;
+    for (const tick of ticksAbove) {
+      if (asks.length >= levels) break;
 
-      // USD price for this level
-      const bidPriceUsd = displayPrice * (1 - pct);
-      const askPriceUsd = displayPrice * (1 + pct);
+      const tickLower = prevTickAbove;
+      const tickUpper = tick;
 
-      // Distribute liquidity across levels using exponential decay from current price
-      const decayFactor = Math.exp(-pct * 3);
-      const levelShare = decayFactor / numLevels;
+      if (askLiquidity > 0n) {
+        const priceL = tickToPriceUsd(tickUpper);
+        const priceU = tickToPriceUsd(tickLower);
 
-      // Bid side: quote token reserves (what buyers use to buy base token)
-      // Shows how much quote token is available at each price level
-      const bidQuoteAmount = quoteBalance * levelShare;
-      const bidBaseAmount = bidQuoteAmount * quoteUsdPrice / bidPriceUsd; // How much base you can buy
-      const bidLiquidityUSD = bidQuoteAmount * quoteUsdPrice;
+        // For asks: selling token0 (base), which means token1 amount is what we calculate
+        let baseAmount: number, quoteAmount: number, liquidityUSD: number;
+        if (isToken0Base) {
+          baseAmount = calculateToken0Amount(askLiquidity, tickLower, tickUpper);
+          quoteAmount = calculateToken1Amount(askLiquidity, tickLower, tickUpper);
+          liquidityUSD = baseAmount * priceUsd;
+        } else {
+          baseAmount = calculateToken1Amount(askLiquidity, tickLower, tickUpper);
+          quoteAmount = calculateToken0Amount(askLiquidity, tickLower, tickUpper);
+          liquidityUSD = baseAmount * priceUsd;
+        }
 
-      if (bidLiquidityUSD > 0.01) {
-        bids.push({
-          price: bidPriceUsd,
-          token0Amount: bidBaseAmount,  // Base token amount you can buy
-          token1Amount: bidQuoteAmount, // Quote token available
-          liquidityUSD: bidLiquidityUSD,
-        });
+        if (liquidityUSD > 0.01 && liquidityUSD < 1e12) {
+          asks.push({
+            price: priceL,
+            token0Amount: baseAmount,
+            token1Amount: quoteAmount,
+            liquidityUSD,
+            tickLower,
+            tickUpper,
+          });
+        }
       }
 
-      // Ask side: base token reserves (what sellers offer)
-      const askBaseAmount = baseBalance * levelShare;
-      const askQuoteAmount = askBaseAmount * askPriceUsd / quoteUsdPrice; // Quote token value
-      const askLiquidityUSD = askBaseAmount * priceUsd;
-
-      if (askLiquidityUSD > 0) {
-        asks.push({
-          price: askPriceUsd,
-          token0Amount: askBaseAmount,  // Base token for sale
-          token1Amount: askQuoteAmount, // Quote token equivalent
-          liquidityUSD: askLiquidityUSD,
-        });
-      }
+      // Update liquidity when crossing tick
+      const liquidityNet = tickLiquidityMap.get(tick) || 0n;
+      askLiquidity = askLiquidity + liquidityNet;
+      prevTickAbove = tick;
     }
 
-    // Sort bids descending (highest price first), asks ascending
+    // BIDS: price goes DOWN (tick decreases) - buy base token with quote token
+    // Traverse from current tick downward
+    let bidLiquidity = poolLiquidity as bigint;
+    let prevTickBelow = currentTick;
+
+    for (const tick of ticksBelow) {
+      if (bids.length >= levels) break;
+
+      const tickUpper = prevTickBelow;
+      const tickLower = tick;
+
+      if (bidLiquidity > 0n) {
+        const priceL = tickToPriceUsd(tickUpper);
+        const priceU = tickToPriceUsd(tickLower);
+
+        // For bids: buying token0 (base), paying with token1 (quote)
+        let baseAmount: number, quoteAmount: number, liquidityUSD: number;
+        if (isToken0Base) {
+          baseAmount = calculateToken0Amount(bidLiquidity, tickLower, tickUpper);
+          quoteAmount = calculateToken1Amount(bidLiquidity, tickLower, tickUpper);
+          liquidityUSD = quoteAmount * quoteUsdPrice;
+        } else {
+          baseAmount = calculateToken1Amount(bidLiquidity, tickLower, tickUpper);
+          quoteAmount = calculateToken0Amount(bidLiquidity, tickLower, tickUpper);
+          liquidityUSD = quoteAmount * quoteUsdPrice;
+        }
+
+        if (liquidityUSD > 0.01 && liquidityUSD < 1e12) {
+          bids.push({
+            price: priceL,
+            token0Amount: baseAmount,
+            token1Amount: quoteAmount,
+            liquidityUSD,
+            tickLower,
+            tickUpper,
+          });
+        }
+      }
+
+      // Update liquidity when crossing tick (subtract liquidityNet when going down)
+      const liquidityNet = tickLiquidityMap.get(tick) || 0n;
+      bidLiquidity = bidLiquidity - liquidityNet;
+      prevTickBelow = tick;
+    }
+
+    // Sort: bids descending (highest price first), asks ascending
     bids.sort((a, b) => b.price - a.price);
     asks.sort((a, b) => a.price - b.price);
 
-    console.log('V3 depth result:', {
-      currentPrice: displayPrice,
-      internalPrice: currentPrice,
-      priceUsd,
-      quoteUsdPrice,
-      baseBalance,
-      quoteBalance,
-      totalPoolUsd,
-      bidsCount: bids.length,
-      asksCount: asks.length,
-      sampleBid: bids[0],
-      sampleAsk: asks[0],
-      baseSymbol,
-      quoteSymbol,
-      isToken0Base,
-    });
+    const baseSymbol = isToken0Base ? symbol0 as string : symbol1 as string;
+    const quoteSymbol = isToken0Base ? symbol1 as string : symbol0 as string;
 
-    // Return with base token as token0 for consistent display
-    // The frontend expects token0 to be the base token (shown in middle column)
+    console.log(`[V3 Depth] Result: ${bids.length} bids, ${asks.length} asks, base=${baseSymbol}, quote=${quoteSymbol}`);
+
     return {
       bids,
       asks,
-      currentPrice: displayPrice,
-      token0Symbol: baseSymbol,  // Base token (what's being traded)
-      token1Symbol: quoteSymbol, // Quote token (what you pay with)
-      token0Decimals: isToken0Base ? Number(decimals0) : Number(decimals1),
-      token1Decimals: isToken0Base ? Number(decimals1) : Number(decimals0),
+      currentPrice: priceUsd > 0 ? priceUsd : 1,
+      token0Symbol: baseSymbol,
+      token1Symbol: quoteSymbol,
+      token0Decimals: isToken0Base ? dec0 : dec1,
+      token1Decimals: isToken0Base ? dec1 : dec0,
     };
   } catch (error) {
-    console.error('Error fetching liquidity depth:', error);
+    console.error('Error fetching V3 liquidity depth:', error);
     return null;
   }
 }
