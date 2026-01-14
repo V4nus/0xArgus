@@ -63,6 +63,7 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
   const [mobileTab, setMobileTab] = useState<'chart' | 'orderbook' | 'trade'>('chart');
   const [deployerAddress, setDeployerAddress] = useState<string | null>(null);
   const [holdersCount, setHoldersCount] = useState<number | null>(null);
+  const [livePrice, setLivePrice] = useState<number>(pool.priceUsd);
   const priceChangeColor = pool.priceChange24h >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
 
   // Handle trade success - trigger chart beam effect
@@ -72,6 +73,11 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
 
   const handleTradeEffectComplete = useCallback(() => {
     setTradeEffect(null);
+  }, []);
+
+  // Handle price update from Chart component for Order Book sync
+  const handlePriceUpdate = useCallback((price: number) => {
+    setLivePrice(price);
   }, []);
 
   // Fetch deployer address and holders count
@@ -308,7 +314,7 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
           <LiquidityDepth
             chainId={pool.chainId}
             poolAddress={pool.poolAddress}
-            priceUsd={pool.priceUsd}
+            priceUsd={livePrice}
             baseSymbol={pool.baseToken.symbol}
             quoteSymbol={pool.quoteToken.symbol}
             liquidityUsd={pool.liquidity}
@@ -334,6 +340,7 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
               baseTokenAddress={pool.baseToken.address}
               tradeEffect={tradeEffect}
               onTradeEffectComplete={handleTradeEffectComplete}
+              onPriceUpdate={handlePriceUpdate}
             />
           </div>
         </div>

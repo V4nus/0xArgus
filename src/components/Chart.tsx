@@ -27,6 +27,7 @@ interface ChartProps {
   quoteTokenAddress?: string;
   tradeEffect?: TradeEffectType;
   onTradeEffectComplete?: () => void;
+  onPriceUpdate?: (price: number) => void;
 }
 
 type ScaleMode = 'regular' | 'indexed' | 'logarithmic';
@@ -44,6 +45,7 @@ export default function Chart({
   baseTokenAddress,
   tradeEffect,
   onTradeEffectComplete,
+  onPriceUpdate,
 }: ChartProps) {
   const mainChartContainerRef = useRef<HTMLDivElement>(null);
   const mainChartRef = useRef<IChartApi | null>(null);
@@ -197,6 +199,10 @@ export default function Chart({
             close: lastData.close,
             volume: lastData.volume,
           };
+          // Notify parent of initial price
+          if (onPriceUpdate && lastData.close > 0) {
+            onPriceUpdate(lastData.close);
+          }
         }
       } catch { setError('Failed to load chart data'); }
       setLoading(false);
@@ -232,6 +238,11 @@ export default function Chart({
       // Use update() for real-time updates - it handles both new bars and updates
       candleSeries.update(barData);
       lastBarRef.current = bar;
+
+      // Notify parent of price update for Order Book sync
+      if (onPriceUpdate && bar.close > 0) {
+        onPriceUpdate(bar.close);
+      }
     };
 
     const unsubscribe = service.subscribeOHLCV(
