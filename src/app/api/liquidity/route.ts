@@ -108,16 +108,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (poolType === 'v2') {
-      const depth = await getV2LiquidityDepth(chainId, poolAddress, priceUsd, levels);
-
-      if (depth && (depth.bids.length > 0 || depth.asks.length > 0)) {
-        return NextResponse.json(
-          { type: 'depth', data: depth, version: 'v2', source: 'rpc' },
-          { headers: cacheHeaders }
-        );
-      }
-
-      // Fallback to simple liquidity for V2
+      // V2 pools use constant product formula (x*y=k) with continuous liquidity
+      // They don't have discrete tick levels like V3/V4, so we show simple reserves
       const simple = await getSimpleLiquidity(chainId, poolAddress);
       if (simple) {
         return NextResponse.json(

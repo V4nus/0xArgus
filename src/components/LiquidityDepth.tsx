@@ -51,6 +51,7 @@ export default function LiquidityDepth({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [poolVersion, setPoolVersion] = useState<string | null>(null); // V2, V3, V4
   const [precisionIndex, setPrecisionIndex] = useState<number>(1); // 0=fine, 1=medium, 2=coarse
   const [viewMode, setViewMode] = useState<ViewMode>('individual');
   const [changedValues, setChangedValues] = useState<Map<string, ChangedValue>>(new Map());
@@ -216,6 +217,7 @@ export default function LiquidityDepth({
 
             result = {
               type: 'depth',
+              version: 'v4', // V4 pool
               data: {
                 bids: (bids || [])
                   .filter((b: { price: number; liquidityUSD: number; tokenAmount: number }) =>
@@ -267,6 +269,10 @@ export default function LiquidityDepth({
           setDepthData(null);
           setSimpleData(null);
         } else if (result.type === 'depth') {
+          // Extract pool version from API response
+          if (result.version) {
+            setPoolVersion(result.version.toUpperCase()); // v2 -> V2, v3 -> V3, v4 -> V4
+          }
           let newData = result.data as DepthData;
 
           // Filter out invalid data for V3 pools (same validation as V4)
@@ -391,6 +397,10 @@ export default function LiquidityDepth({
           setTradeAdjustments({ askConsumed: 0, bidConsumed: 0 });
           lastApiUpdateRef.current = Date.now();
         } else if (result.type === 'simple') {
+          // Extract pool version from API response
+          if (result.version) {
+            setPoolVersion(result.version.toUpperCase());
+          }
           setSimpleData(result.data);
           setDepthData(null);
           setLastUpdated(new Date());
@@ -569,6 +579,11 @@ export default function LiquidityDepth({
           <div className="flex items-center justify-between mb-2 gap-1">
             <div className="flex items-center gap-1 sm:gap-2">
               <span className="text-xs sm:text-sm font-medium">Order Book</span>
+              {poolVersion && (
+                <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-[#21262d] text-[#58a6ff] rounded">
+                  {poolVersion}
+                </span>
+              )}
             </div>
             {/* Precision Selector - dynamic based on price */}
             <div className="flex items-center gap-0.5 sm:gap-1 bg-[#21262d] rounded p-0.5">
@@ -813,14 +828,21 @@ export default function LiquidityDepth({
     );
   }
 
-  // Simple Liquidity Display
+  // Simple Liquidity Display (V2 pools)
   if (simpleData) {
     const total = simpleData.token0 * priceUsd + simpleData.token1;
     const token0Pct = (simpleData.token0 * priceUsd / total) * 100 || 50;
 
     return (
       <div className="bg-[#161b22] rounded-lg border border-[#30363d] p-4">
-        <div className="text-sm font-medium mb-3">Pool Liquidity</div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm font-medium">Pool Liquidity</span>
+          {poolVersion && (
+            <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-[#21262d] text-[#58a6ff] rounded">
+              {poolVersion}
+            </span>
+          )}
+        </div>
 
         {/* Liquidity Bar */}
         <div className="h-6 rounded-full overflow-hidden flex mb-3">
