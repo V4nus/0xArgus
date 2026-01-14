@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUp, ArrowDown, TrendingUp, Droplets, BarChart3, RefreshCw } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
+import { formatNumber, formatPrice } from '@/lib/api';
 
 // Chain logos - use local files
 const CHAIN_LOGOS: Record<string, string> = {
@@ -586,17 +587,4 @@ function PoolRow({ pool, t }: { pool: typeof ALL_POOLS[0]; t: ReturnType<typeof 
   );
 }
 
-function formatNumber(num: number): string {
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-  return num.toFixed(0);
-}
-
-function formatPrice(price: number): string {
-  if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  if (price >= 1) return price.toFixed(2);
-  if (price >= 0.0001) return price.toFixed(6);
-  if (price >= 0.0000001) return price.toFixed(8);
-  return price.toExponential(2);
-}
+// formatNumber and formatPrice imported from @/lib/api

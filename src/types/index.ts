@@ -79,6 +79,33 @@ export interface SearchResult {
   imageUrl?: string; // Pool/token image from DexScreener
 }
 
+// Unified API Response type
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  source?: string; // 'database' | 'rpc' | 'cache'
+  version?: string; // 'v2' | 'v3' | 'v4'
+}
+
+// Helper to create success response
+export function apiSuccess<T>(data: T, options?: { source?: string; version?: string }): ApiResponse<T> {
+  return {
+    success: true,
+    data,
+    source: options?.source,
+    version: options?.version,
+  };
+}
+
+// Helper to create error response
+export function apiError(error: string): ApiResponse {
+  return {
+    success: false,
+    error,
+  };
+}
+
 // API Response types
 export interface DexPaprikaOHLCV {
   time_open: string;

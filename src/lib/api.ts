@@ -292,6 +292,11 @@ export async function getOHLCVData(
  * Format number with appropriate suffix (K, M, B)
  */
 export function formatNumber(num: number): string {
+  // Handle edge cases: NaN, Infinity, negative
+  if (!isFinite(num) || isNaN(num)) return '0';
+  if (num < 0) num = Math.abs(num);
+  if (num === 0) return '0';
+
   if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
   if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
   if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
@@ -304,6 +309,10 @@ export function formatNumber(num: number): string {
  * Format price with appropriate decimal places
  */
 export function formatPrice(price: number): string {
+  // Handle edge cases: NaN, Infinity, negative
+  if (!isFinite(price) || isNaN(price) || price < 0) return '0';
+  if (price === 0) return '0';
+
   if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
   if (price >= 1) return price.toFixed(4);
   if (price >= 0.0001) return price.toFixed(8);
@@ -314,6 +323,9 @@ export function formatPrice(price: number): string {
  * Format percentage change
  */
 export function formatPercentage(value: number): string {
+  // Handle edge cases
+  if (!isFinite(value) || isNaN(value)) return '+0.00%';
+
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
 }

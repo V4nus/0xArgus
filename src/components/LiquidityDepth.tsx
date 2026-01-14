@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { DepthData } from '@/lib/liquidity';
 import { formatNumber } from '@/lib/api';
 import { isStablecoin } from '@/lib/quote-prices';
@@ -60,6 +60,8 @@ export default function LiquidityDepth({
   const [tradeAdjustments, setTradeAdjustments] = useState<{ askConsumed: number; bidConsumed: number }>({ askConsumed: 0, bidConsumed: 0 });
   const isInitialLoad = useRef(true);
   const isFetchingRef = useRef(false); // Prevent request stacking
+  const abortControllerRef = useRef<AbortController | null>(null); // Cancel stale requests
+  const requestIdRef = useRef(0); // Track request sequence to discard stale responses
   const prevDataRef = useRef<Map<number, { base: number; quote: number }>>(new Map());
   const lastApiUpdateRef = useRef<number>(Date.now()); // Track when API data was refreshed
 
@@ -132,6 +134,17 @@ export default function LiquidityDepth({
       if (isFetchingRef.current && !isInitialLoad.current) {
         return;
       }
+
+      // Cancel any pending request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller and increment request ID
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const currentRequestId = ++requestIdRef.current;
+
       isFetchingRef.current = true;
 
       // Only show loading on initial load, not on refreshes
@@ -158,7 +171,6 @@ export default function LiquidityDepth({
         }
 
         // Add timeout to prevent infinite loading
-        const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
         // For V4 pools, use order-flow API which has correct incremental calculation
@@ -225,6 +237,11 @@ export default function LiquidityDepth({
           });
           clearTimeout(timeoutId);
           result = await response.json();
+        }
+
+        // Discard stale response if a newer request was made
+        if (currentRequestId !== requestIdRef.current) {
+          return;
         }
 
         if (!response.ok) {
@@ -332,23 +349,31 @@ export default function LiquidityDepth({
           setError('Unknown response type');
         }
       } catch (err) {
+        // Ignore abort errors from cancelled requests
+        if (err instanceof Error && err.name === 'AbortError') {
+          // Only show timeout error if this was still the active request
+          if (currentRequestId === requestIdRef.current && isInitialLoad.current) {
+            setError('请求超时 - RPC 响应太慢');
+          }
+          return;
+        }
+
         console.error('Liquidity fetch error:', err);
         // Don't set error on refresh failures, keep showing old data
-        if (isInitialLoad.current) {
-          if (err instanceof Error && err.name === 'AbortError') {
-            setError('请求超时 - RPC 响应太慢');
-          } else {
-            setError('获取流动性数据失败');
-          }
+        if (isInitialLoad.current && currentRequestId === requestIdRef.current) {
+          setError('获取流动性数据失败');
         }
       } finally {
-        setIsRefreshing(false);
-        isFetchingRef.current = false;
-      }
+        // Only update state if this is still the active request
+        if (currentRequestId === requestIdRef.current) {
+          setIsRefreshing(false);
+          isFetchingRef.current = false;
 
-      if (isInitialLoad.current) {
-        setLoading(false);
-        isInitialLoad.current = false;
+          if (isInitialLoad.current) {
+            setLoading(false);
+            isInitialLoad.current = false;
+          }
+        }
       }
     };
 
@@ -356,12 +381,18 @@ export default function LiquidityDepth({
       fetchData();
       // Update every 3 seconds (API has 5-second cache, so this balances freshness vs performance)
       const interval = setInterval(fetchData, 3000);
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        // Cancel any pending request on cleanup
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      };
     } else {
       setError('Solana not supported yet');
       setLoading(false);
     }
-  }, [chainId, poolAddress, priceUsd, baseTokenAddress, quoteTokenAddress]); // priceRange removed - filter client-side
+  }, [chainId, poolAddress, priceUsd, baseTokenAddress, quoteTokenAddress]);
 
   // Calculate dynamic precision options based on current price
   const getPrecisionOptions = (price: number): number[] => {
