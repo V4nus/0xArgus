@@ -173,8 +173,8 @@ export async function GET(request: NextRequest) {
     const minAmountOut = bestQuote.amountOut * BigInt(10000 - slippageBps) / BigInt(10000);
 
     // Build the swap calldata for SwapRouter02
-    // IMPORTANT: Always use multicall to set deadline properly
-    const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
+    // IMPORTANT: Always use multicall to set deadline properly (v2 fix)
+    const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 minutes from now
 
     const multicallData: `0x${string}`[] = [];
 
