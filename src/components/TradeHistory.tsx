@@ -158,16 +158,6 @@ export default function TradeHistory({
     );
   }
 
-  // Calculate buy/sell stats
-  const recentTrades = trades.slice(0, 20);
-  const buyCount = recentTrades.filter((t) => t.type === 'buy').length;
-  const sellCount = recentTrades.filter((t) => t.type === 'sell').length;
-  const buyVolume = recentTrades
-    .filter((t) => t.type === 'buy')
-    .reduce((sum, t) => sum + t.volumeUsd, 0);
-  const sellVolume = recentTrades
-    .filter((t) => t.type === 'sell')
-    .reduce((sum, t) => sum + t.volumeUsd, 0);
 
   return (
     <div className="bg-[#161b22] rounded-lg border border-[#30363d] overflow-hidden h-full flex flex-col">
@@ -188,28 +178,6 @@ export default function TradeHistory({
             </div>
           </div>
           <span className="text-sm text-gray-400">{trades.length} {t.tradeHistory.trades}</span>
-        </div>
-        {/* Buy/Sell summary bar */}
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-[#21262d] rounded-full overflow-hidden flex">
-            <div
-              className="h-full bg-[#3fb950]"
-              style={{
-                width: `${buyCount + sellCount > 0 ? (buyCount / (buyCount + sellCount)) * 100 : 50}%`,
-              }}
-            />
-            <div
-              className="h-full bg-[#f85149]"
-              style={{
-                width: `${buyCount + sellCount > 0 ? (sellCount / (buyCount + sellCount)) * 100 : 50}%`,
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-[#3fb950]">{buyCount}B</span>
-            <span className="text-gray-500">/</span>
-            <span className="text-[#f85149]">{sellCount}S</span>
-          </div>
         </div>
       </div>
 
@@ -273,17 +241,6 @@ export default function TradeHistory({
         </table>
       </div>
 
-      {/* Volume summary */}
-      <div className="px-3 py-2 border-t border-[#30363d] text-sm flex-shrink-0">
-        <div className="flex justify-between text-gray-400">
-          <span>{t.tradeHistory.recentVolume}</span>
-          <span>${formatNumber(buyVolume + sellVolume)}</span>
-        </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-[#3fb950]">{t.trade.buy}: ${formatNumber(buyVolume)}</span>
-          <span className="text-[#f85149]">{t.trade.sell}: ${formatNumber(sellVolume)}</span>
-        </div>
-      </div>
     </div>
   );
 }

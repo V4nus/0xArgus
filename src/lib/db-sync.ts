@@ -74,8 +74,8 @@ export async function syncLiquidityDepth(chainId: string, poolAddress: string, p
       if (!pool) return null;
     }
 
-    // Fetch liquidity depth from RPC
-    const depthData = await getLiquidityDepth(chainId, poolAddress, priceUsd, 50);
+    // Fetch liquidity depth from RPC (0 = full range)
+    const depthData = await getLiquidityDepth(chainId, poolAddress, priceUsd, 0);
     if (!depthData) {
       console.error('Failed to fetch liquidity depth from RPC');
       return null;

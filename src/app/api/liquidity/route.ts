@@ -19,11 +19,8 @@ export async function GET(request: NextRequest) {
   const priceUsd = parseFloat(searchParams.get('priceUsd') || '0');
   const token0Address = searchParams.get('token0Address');
   const token1Address = searchParams.get('token1Address');
-  const range = parseInt(searchParams.get('range') || '100'); // 50 or 100 percent
+  const levels = parseInt(searchParams.get('levels') || '0'); // 0 = full range (all ticks)
   const forceRefresh = searchParams.get('refresh') === 'true';
-
-  // Pass range directly as the max percentage for depth levels
-  const levels = range; // 50 means ±50%, 100 means ±100%
 
   if (!chainId || !poolAddress) {
     return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });

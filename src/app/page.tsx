@@ -101,7 +101,6 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
                 <a href="#features" className="hover:text-white transition-colors">Features</a>
-                <a href="#trending" className="hover:text-white transition-colors">Trending</a>
               </nav>
               <div className="flex items-center gap-4">
                 <a

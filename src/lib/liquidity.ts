@@ -745,7 +745,7 @@ export async function getLiquidityDepth(
   chainId: string,
   poolAddress: string,
   priceUsd: number,
-  levels: number = 50
+  levels: number = 0 // 0 means unlimited (full range)
 ): Promise<DepthData | null> {
   try {
     const chain = CHAINS[chainId];
@@ -966,6 +966,7 @@ export async function getLiquidityDepth(
     // Get quote token USD price for liquidity USD calculation
     const currentPriceRatio = sqrtPriceX96ToPrice(sqrtPriceX96, dec0, dec1);
     const quoteUsdPrice = isToken0Base ? (currentPriceRatio > 0 ? priceUsd / currentPriceRatio : 0) : priceUsd * currentPriceRatio;
+    console.log(`[V3 Depth] Calculating quoteUsdPrice: priceUsd=${priceUsd}, currentPriceRatio=${currentPriceRatio}, isToken0Base=${isToken0Base}, quoteUsdPrice=${quoteUsdPrice}`);
 
     // ASKS: price goes UP (tick increases) - sell base token, receive quote token
     // Traverse from current tick upward
@@ -973,7 +974,7 @@ export async function getLiquidityDepth(
     let prevTickAbove = currentTick;
 
     for (const tick of ticksAbove) {
-      if (asks.length >= levels) break;
+      if (levels > 0 && asks.length >= levels) break; // Only limit if levels > 0
 
       const tickLower = prevTickAbove;
       const tickUpper = tick;
@@ -1018,7 +1019,7 @@ export async function getLiquidityDepth(
     let prevTickBelow = currentTick;
 
     for (const tick of ticksBelow) {
-      if (bids.length >= levels) break;
+      if (levels > 0 && bids.length >= levels) break; // Only limit if levels > 0
 
       const tickUpper = prevTickBelow;
       const tickLower = tick;
@@ -1064,7 +1065,12 @@ export async function getLiquidityDepth(
     const baseSymbol = isToken0Base ? symbol0 as string : symbol1 as string;
     const quoteSymbol = isToken0Base ? symbol1 as string : symbol0 as string;
 
+    // Debug: show sample liquidityUSD values to diagnose filtering issue
+    const sortedBidsByLiq = [...bids].sort((a, b) => b.liquidityUSD - a.liquidityUSD);
+    const sortedAsksByLiq = [...asks].sort((a, b) => b.liquidityUSD - a.liquidityUSD);
     console.log(`[V3 Depth] Result: ${bids.length} bids, ${asks.length} asks, base=${baseSymbol}, quote=${quoteSymbol}`);
+    console.log(`[V3 Depth] Top 3 bids by liquidityUSD:`, sortedBidsByLiq.slice(0, 3).map(b => ({ price: b.price.toFixed(8), liquidityUSD: b.liquidityUSD.toFixed(2) })));
+    console.log(`[V3 Depth] Top 3 asks by liquidityUSD:`, sortedAsksByLiq.slice(0, 3).map(a => ({ price: a.price.toFixed(8), liquidityUSD: a.liquidityUSD.toFixed(2) })));
 
     return {
       bids,

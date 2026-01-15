@@ -13,8 +13,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 body {
@@ -192,4 +192,31 @@ body {
 
 .animate-scroll {
   animation: scroll 20s linear infinite;
+}
+
+/* Visible scrollbar for order book - always show */
+.scrollbar-visible {
+  scrollbar-width: thin;
+  scrollbar-color: #484f58 #161b22;
+  overflow-y: scroll !important; /* Force scrollbar to always show */
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: #161b22 !important;
+  border-radius: 4px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background: #484f58 !important;
+  border-radius: 4px;
+  border: 2px solid #161b22;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: #6e7681 !important;
 }

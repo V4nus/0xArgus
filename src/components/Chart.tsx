@@ -15,8 +15,26 @@ import {
 import { OHLCVData, TimeInterval, TIME_INTERVALS } from '@/types';
 import { getOHLCVData } from '@/lib/api';
 import { getRealtimeService, OHLCVUpdate, RealtimeBar } from '@/lib/realtime';
+import { OrderBookBarsPrimitive } from '@/lib/chart-primitives';
 
 export type TradeEffectType = 'buy' | 'sell' | null;
+
+// Large order from order book data (AMM liquidity converted to limit orders)
+interface LargeOrder {
+  price: number;
+  liquidityUSD: number;
+  type: 'bid' | 'ask';  // bid = buy order, ask = sell order
+  rank: number;  // 1-5, closer to current price = lower rank (more important)
+  percentageAboveAvg: number;
+  token0Amount: number;  // Base token amount
+  token1Amount: number;  // Quote token amount
+}
+
+// Aggregated order data from Order Book
+interface OrderBookData {
+  bids: Array<{ price: number; liquidityUSD: number }>;
+  asks: Array<{ price: number; liquidityUSD: number }>;
+}
 
 interface ChartProps {
   chainId: string;
@@ -28,6 +46,11 @@ interface ChartProps {
   tradeEffect?: TradeEffectType;
   onTradeEffectComplete?: () => void;
   onPriceUpdate?: (price: number) => void;
+  token0Decimals?: number;
+  token1Decimals?: number;
+  token0Symbol?: string;
+  token1Symbol?: string;
+  orderBookData?: OrderBookData | null; // Pre-aggregated data from Order Book
 }
 
 type ScaleMode = 'regular' | 'indexed' | 'logarithmic';
@@ -42,26 +65,38 @@ export default function Chart({
   chainId,
   poolAddress,
   symbol,
+  priceUsd,
   baseTokenAddress,
+  quoteTokenAddress,
   tradeEffect,
   onTradeEffectComplete,
   onPriceUpdate,
+  token0Decimals = 18,
+  token1Decimals = 18,
+  token0Symbol = 'Token0',
+  token1Symbol = 'Token1',
+  orderBookData = null,
 }: ChartProps) {
   const mainChartContainerRef = useRef<HTMLDivElement>(null);
   const mainChartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const lastBarRef = useRef<RealtimeBar | null>(null);
+  const orderBookPrimitiveRef = useRef<OrderBookBarsPrimitive | null>(null);
 
   const [interval, setInterval] = useState<TimeInterval>('1h');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scaleMode, setScaleMode] = useState<ScaleMode>('regular');
   const [showScaleMenu, setShowScaleMenu] = useState(false);
+  const [scaleMenuPosition, setScaleMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [isLive, setIsLive] = useState(false);
   const scaleMenuRef = useRef<HTMLDivElement>(null);
   const [showTradeEffect, setShowTradeEffect] = useState<'buy' | 'sell' | null>(null);
   const [tradeEffectY, setTradeEffectY] = useState<number | null>(null);
+  const [showLargeOrders, setShowLargeOrders] = useState(true);
+  const [largeOrders, setLargeOrders] = useState<LargeOrder[]>([]);
+  const maxLiquidityRef = useRef<number>(0); // Track max liquidity for bar width scaling
 
   // Handle trade effect trigger from parent
   useEffect(() => {
@@ -155,9 +190,30 @@ export default function Chart({
     window.addEventListener('resize', handleResize);
     handleResize();
 
+    // Right-click context menu for Y-axis (price scale)
+    const handleContextMenu = (e: MouseEvent) => {
+      const container = mainChartContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const containerWidth = rect.width;
+
+      // Check if click is on the right side (Y-axis area, approximately last 60px)
+      const yAxisWidth = 60;
+      if (x > containerWidth - yAxisWidth) {
+        e.preventDefault();
+        setScaleMenuPosition({ x: e.clientX, y: e.clientY });
+        setShowScaleMenu(true);
+      }
+    };
+
+    mainChartContainerRef.current?.addEventListener('contextmenu', handleContextMenu);
+
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
+      mainChartContainerRef.current?.removeEventListener('contextmenu', handleContextMenu);
       chart.remove();
     };
   }, []);
@@ -259,6 +315,118 @@ export default function Chart({
     };
   }, [chainId, baseTokenAddress, interval]);
 
+
+  // Track current price for triggering large orders fetch
+  const [currentChartPrice, setCurrentChartPrice] = useState<number>(0);
+
+  // Update currentChartPrice when lastBar changes or data loads
+  useEffect(() => {
+    if (lastBarRef.current?.close && lastBarRef.current.close > 0) {
+      setCurrentChartPrice(lastBarRef.current.close);
+    }
+  }, [loading]); // Trigger when loading finishes
+
+  // Also update price from priceUsd prop if available (fallback for initial load)
+  useEffect(() => {
+    if (priceUsd && priceUsd > 0 && currentChartPrice === 0) {
+      setCurrentChartPrice(priceUsd);
+    }
+  }, [priceUsd, currentChartPrice]);
+
+  // Process pre-aggregated order data from Order Book
+  // Sort by price (closest to current price) and take top 10 from each side
+  useEffect(() => {
+    if (!showLargeOrders || !orderBookData) {
+      setLargeOrders([]);
+      return;
+    }
+
+    const { bids, asks } = orderBookData;
+    console.log(`[Chart] Received orderBookData: ${bids.length} bids, ${asks.length} asks`);
+
+    // Bids: sort by price descending (highest price = closest to current), take top 5
+    const top10Bids: LargeOrder[] = [...bids]
+      .sort((a, b) => b.price - a.price)  // Descending - highest price first
+      .slice(0, 5)
+      .map((bid, index) => ({
+        price: bid.price,
+        liquidityUSD: bid.liquidityUSD,
+        type: 'bid' as const,
+        rank: index + 1,  // 1 = closest to current price, 5 = farthest
+        percentageAboveAvg: 0,
+        token0Amount: 0,
+        token1Amount: 0,
+      }));
+
+    // Asks: sort by price ascending (lowest price = closest to current), take top 5
+    const top10Asks: LargeOrder[] = [...asks]
+      .sort((a, b) => a.price - b.price)  // Ascending - lowest price first
+      .slice(0, 5)
+      .map((ask, index) => ({
+        price: ask.price,
+        liquidityUSD: ask.liquidityUSD,
+        type: 'ask' as const,
+        rank: index + 1,  // 1 = closest to current price, 5 = farthest
+        percentageAboveAvg: 0,
+        token0Amount: 0,
+        token1Amount: 0,
+      }));
+
+    console.log(`[Chart] Top 10 bids (by price desc):`, top10Bids.map(b => ({ price: b.price.toFixed(8), liq: b.liquidityUSD.toFixed(0) })));
+    console.log(`[Chart] Top 10 asks (by price asc):`, top10Asks.map(a => ({ price: a.price.toFixed(8), liq: a.liquidityUSD.toFixed(0) })));
+
+    // Combine top 10 bids + top 10 asks = 20 lines max
+    const orders = [...top10Bids, ...top10Asks];
+    console.log(`[Chart] Total orders: ${orders.length} (${top10Bids.length} bids + ${top10Asks.length} asks)`);
+
+    if (orders.length > 0) {
+      maxLiquidityRef.current = Math.max(...orders.map(o => o.liquidityUSD));
+    }
+
+    setLargeOrders(orders);
+  }, [orderBookData, showLargeOrders]);
+
+  // Attach OrderBook primitive to candlestick series (after chart initialization)
+  useEffect(() => {
+    // Wait a bit for chart to be fully initialized
+    const timeout = setTimeout(() => {
+      const candleSeries = candleSeriesRef.current;
+      if (!candleSeries || orderBookPrimitiveRef.current) return;
+
+      // Create and attach the primitive
+      const primitive = new OrderBookBarsPrimitive();
+      candleSeries.attachPrimitive(primitive);
+      orderBookPrimitiveRef.current = primitive;
+    }, 100);
+
+    return () => {
+      clearTimeout(timeout);
+      if (candleSeriesRef.current && orderBookPrimitiveRef.current) {
+        candleSeriesRef.current.detachPrimitive(orderBookPrimitiveRef.current);
+        orderBookPrimitiveRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update order bars via primitive when largeOrders change
+  useEffect(() => {
+    const primitive = orderBookPrimitiveRef.current;
+    if (!primitive) return;
+
+    if (showLargeOrders && largeOrders.length > 0) {
+      // Convert to OrderBookOrder format
+      const orders = largeOrders.map(order => ({
+        price: order.price,
+        liquidityUSD: order.liquidityUSD,
+        type: order.type,
+        rank: order.rank,
+      }));
+      primitive.setOrders(orders);
+    } else {
+      primitive.clearOrders();
+    }
+  }, [largeOrders, showLargeOrders]);
+
   // Apply scale mode to chart
   useEffect(() => {
     const chart = mainChartRef.current;
@@ -289,6 +457,7 @@ export default function Chart({
     const handleClickOutside = (e: MouseEvent) => {
       if (scaleMenuRef.current && !scaleMenuRef.current.contains(e.target as Node)) {
         setShowScaleMenu(false);
+        setScaleMenuPosition(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -313,37 +482,18 @@ export default function Chart({
 
         {/* Right side controls */}
         <div className="flex items-center gap-1 sm:gap-3">
-          {/* Scale Mode Dropdown - hidden on very small screens */}
-          <div className="relative hidden sm:block" ref={scaleMenuRef}>
-            <button
-              onClick={() => setShowScaleMenu(!showScaleMenu)}
-              className="px-2 py-1 text-xs rounded bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] flex items-center gap-1"
-              title="Price scale mode"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
-              {SCALE_MODES.find(s => s.value === scaleMode)?.label}
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showScaleMenu && (
-              <div className="absolute right-0 top-full mt-1 bg-[#21262d] border border-[#30363d] rounded shadow-lg z-20 min-w-[120px]">
-                {SCALE_MODES.map((mode) => (
-                  <button
-                    key={mode.value}
-                    onClick={() => { setScaleMode(mode.value); setShowScaleMenu(false); }}
-                    className={`w-full px-3 py-1.5 text-xs text-left hover:bg-[#30363d] ${
-                      scaleMode === mode.value ? 'text-[#58a6ff]' : 'text-[#c9d1d9]'
-                    }`}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Orders Toggle Button */}
+          <button
+            onClick={() => setShowLargeOrders(!showLargeOrders)}
+            className={`px-2 py-1 text-xs rounded border cursor-pointer ${
+              showLargeOrders
+                ? 'bg-[#58a6ff]/20 text-[#58a6ff] border-[#58a6ff]/50'
+                : 'bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d]'
+            }`}
+            title="Toggle order book lines on chart"
+          >
+            Orders
+          </button>
 
           {/* Fit Content Button */}
           <button
@@ -380,6 +530,39 @@ export default function Chart({
           </div>
         )}
         <div ref={mainChartContainerRef} className="w-full h-full" />
+
+        {/* Right-click context menu for Y-axis scale mode */}
+        {showScaleMenu && scaleMenuPosition && (
+          <div
+            ref={scaleMenuRef}
+            className="fixed bg-[#21262d] border border-[#30363d] rounded shadow-lg z-50 min-w-[140px]"
+            style={{ left: scaleMenuPosition.x, top: scaleMenuPosition.y }}
+          >
+            <div className="px-3 py-1.5 text-[10px] text-gray-500 border-b border-[#30363d]">Price Scale</div>
+            {SCALE_MODES.map((mode) => (
+              <button
+                key={mode.value}
+                onClick={() => {
+                  setScaleMode(mode.value);
+                  setShowScaleMenu(false);
+                  setScaleMenuPosition(null);
+                }}
+                className={`w-full px-3 py-1.5 text-xs text-left hover:bg-[#30363d] flex items-center gap-2 ${
+                  scaleMode === mode.value ? 'text-[#58a6ff]' : 'text-[#c9d1d9]'
+                }`}
+              >
+                {scaleMode === mode.value && (
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <span className={scaleMode === mode.value ? '' : 'ml-5'}>{mode.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Order Bars - rendered via Series Primitives (integrated into chart) */}
 
         {/* Trade Effect Overlay */}
         {showTradeEffect && (

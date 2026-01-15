@@ -442,7 +442,17 @@ export async function getLPPositions(
     console.log(`Updating cache from block ${cache.lastBlock + 1}`);
     const newPositions = await queryLPPositions(chainId, poolAddress, cache.lastBlock + 1, currentBlock);
 
-    cache.positions = [...cache.positions, ...newPositions];
+    // Deduplicate positions by txHash + type + tickLower + tickUpper
+    const existingKeys = new Set(
+      cache.positions.map(p => `${p.txHash}-${p.type}-${p.tickLower}-${p.tickUpper}`)
+    );
+    const uniqueNewPositions = newPositions.filter(
+      p => !existingKeys.has(`${p.txHash}-${p.type}-${p.tickLower}-${p.tickUpper}`)
+    );
+
+    console.log(`[LP] Found ${newPositions.length} new events, ${uniqueNewPositions.length} unique after dedup`);
+
+    cache.positions = [...cache.positions, ...uniqueNewPositions];
     cache.lastBlock = currentBlock;
     cache.updatedAt = Date.now();
     saveCache(cache);

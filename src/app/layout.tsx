@@ -1,8 +1,25 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
 import { I18nProvider } from "@/lib/i18n";
 import { RealtimeProvider } from "@/lib/realtime-provider";
+
+// IBM Plex Sans - Similar to Binance's font
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-ibm-plex-sans",
+  display: "swap",
+});
+
+// IBM Plex Mono - For numbers and code
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-ibm-plex-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "0xArgus - Decode AMM Liquidity Into Order Flow",
@@ -26,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="antialiased font-sans">
         <I18nProvider>
           <RealtimeProvider pollingInterval={5000}>

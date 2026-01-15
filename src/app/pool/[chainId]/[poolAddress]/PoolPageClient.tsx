@@ -65,6 +65,9 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
   const [deployerAddress, setDeployerAddress] = useState<string | null>(null);
   const [holdersCount, setHoldersCount] = useState<number | null>(null);
   const [livePrice, setLivePrice] = useState<number>(pool.priceUsd);
+  const [orderBookPrecision, setOrderBookPrecision] = useState<number>(0); // Shared precision from Order Book
+  // Aggregated order data from Order Book for Chart liquidity lines
+  const [orderBookData, setOrderBookData] = useState<{ bids: Array<{ price: number; liquidityUSD: number }>; asks: Array<{ price: number; liquidityUSD: number }> } | null>(null);
   const priceChangeColor = pool.priceChange24h >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
 
   // Search state
@@ -88,6 +91,17 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
   const handlePriceUpdate = useCallback((price: number) => {
     setLivePrice(price);
   }, []);
+
+  // Handle precision change from Order Book for Chart sync
+  const handlePrecisionChange = useCallback((precision: number) => {
+    setOrderBookPrecision(precision);
+  }, []);
+
+  // Handle aggregated order data from Order Book for Chart liquidity lines
+  const handleOrderDataChange = useCallback((data: { bids: Array<{ price: number; liquidityUSD: number }>; asks: Array<{ price: number; liquidityUSD: number }> }) => {
+    setOrderBookData(data);
+  }, []);
+
 
   // Search functionality
   useEffect(() => {
@@ -450,6 +464,8 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
             liquidityQuote={pool.liquidityQuote}
             baseTokenAddress={pool.baseToken.address}
             quoteTokenAddress={pool.quoteToken.address}
+            onPrecisionChange={handlePrecisionChange}
+            onOrderDataChange={handleOrderDataChange}
           />
         </div>
 
@@ -465,10 +481,17 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
               chainId={pool.chainId}
               poolAddress={pool.poolAddress}
               symbol={`${pool.baseToken.symbol}/${pool.quoteToken.symbol}`}
+              priceUsd={livePrice || pool.priceUsd}
               baseTokenAddress={pool.baseToken.address}
+              quoteTokenAddress={pool.quoteToken.address}
               tradeEffect={tradeEffect}
               onTradeEffectComplete={handleTradeEffectComplete}
               onPriceUpdate={handlePriceUpdate}
+              token0Decimals={pool.baseToken.decimals}
+              token1Decimals={pool.quoteToken.decimals}
+              token0Symbol={pool.baseToken.symbol}
+              token1Symbol={pool.quoteToken.symbol}
+              orderBookData={orderBookData}
             />
           </div>
         </div>

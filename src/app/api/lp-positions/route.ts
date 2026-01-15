@@ -19,6 +19,72 @@ function priceToTick(price: number, token0Decimals: number = 18, token1Decimals:
   return Math.floor(Math.log(adjustedPrice) / Math.log(1.0001));
 }
 
+// Aggregated active position
+interface ActivePosition {
+  owner: string;
+  tickLower: number;
+  tickUpper: number;
+  netLiquidity: bigint;
+  lastTxHash: string;
+  lastBlockNumber: number;
+  lastTimestamp: number;
+  mintCount: number;
+  burnCount: number;
+}
+
+// Aggregate LP events to get current active positions
+function aggregateActivePositions(positions: LPPosition[]): ActivePosition[] {
+  // Group by (owner, tickLower, tickUpper)
+  const positionMap = new Map<string, ActivePosition>();
+
+  for (const pos of positions) {
+    const key = `${pos.owner.toLowerCase()}-${pos.tickLower}-${pos.tickUpper}`;
+
+    const liquidity = BigInt(pos.liquidity || '0');
+    const isMint = pos.type === 'mint';
+
+    if (positionMap.has(key)) {
+      const existing = positionMap.get(key)!;
+      // Add or subtract liquidity based on event type
+      if (isMint) {
+        existing.netLiquidity = existing.netLiquidity + liquidity;
+        existing.mintCount++;
+      } else {
+        existing.netLiquidity = existing.netLiquidity - liquidity;
+        existing.burnCount++;
+      }
+      // Update to most recent transaction
+      if (pos.timestamp > existing.lastTimestamp) {
+        existing.lastTxHash = pos.txHash;
+        existing.lastBlockNumber = pos.blockNumber;
+        existing.lastTimestamp = pos.timestamp;
+      }
+    } else {
+      positionMap.set(key, {
+        owner: pos.owner,
+        tickLower: pos.tickLower,
+        tickUpper: pos.tickUpper,
+        netLiquidity: isMint ? liquidity : -liquidity,
+        lastTxHash: pos.txHash,
+        lastBlockNumber: pos.blockNumber,
+        lastTimestamp: pos.timestamp,
+        mintCount: isMint ? 1 : 0,
+        burnCount: isMint ? 0 : 1,
+      });
+    }
+  }
+
+  // Filter to positions with positive liquidity and convert to array
+  return Array.from(positionMap.values())
+    .filter(p => p.netLiquidity > 0n)
+    .sort((a, b) => {
+      // Sort by liquidity (descending), then by timestamp (most recent first)
+      const liqDiff = Number(b.netLiquidity - a.netLiquidity);
+      if (liqDiff !== 0) return liqDiff > 0 ? 1 : -1;
+      return b.lastTimestamp - a.lastTimestamp;
+    });
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const chainId = searchParams.get('chainId');
@@ -89,10 +155,10 @@ export async function GET(request: NextRequest) {
     // Sort by timestamp (most recent first)
     filteredPositions.sort((a, b) => b.timestamp - a.timestamp);
 
-    // Limit results
+    // Limit results for event history
     const limitedPositions = filteredPositions.slice(0, limit);
 
-    // Format for display
+    // Format for display (event history)
     const formattedPositions = limitedPositions.map(pos =>
       formatPosition(pos, token0Decimals, token1Decimals, token0Symbol, token1Symbol)
     );
@@ -102,16 +168,43 @@ export async function GET(request: NextRequest) {
     const burnCount = filteredPositions.filter(p => p.type === 'burn').length;
     const uniqueOwners = new Set(filteredPositions.map(p => p.owner)).size;
 
+    // Aggregate to get current active LP positions (with net liquidity > 0)
+    const activePositions = aggregateActivePositions(allPositions);
+
+    // Format active positions for display
+    const formattedActivePositions = activePositions.slice(0, limit).map(pos => {
+      const priceLower = tickToPrice(pos.tickLower, token0Decimals, token1Decimals);
+      const priceUpper = tickToPrice(pos.tickUpper, token0Decimals, token1Decimals);
+
+      return {
+        owner: pos.owner,
+        ownerShort: `${pos.owner.slice(0, 6)}...${pos.owner.slice(-4)}`,
+        tickLower: pos.tickLower,
+        tickUpper: pos.tickUpper,
+        priceLower,
+        priceUpper,
+        liquidity: pos.netLiquidity.toString(),
+        lastTxHash: pos.lastTxHash,
+        lastTimestamp: new Date(pos.lastTimestamp * 1000).toLocaleString(),
+        mintCount: pos.mintCount,
+        burnCount: pos.burnCount,
+      };
+    });
+
     return NextResponse.json({
       success: true,
       data: {
+        // Event history (Add/Remove events)
         positions: formattedPositions,
+        // Current active LP positions with net liquidity > 0
+        activePositions: formattedActivePositions,
         stats: {
           total: filteredPositions.length,
           displayed: formattedPositions.length,
           mints: mintCount,
           burns: burnCount,
           uniqueLPs: uniqueOwners,
+          activePositionCount: activePositions.length,
         },
         source, // 'dune' or 'rpc'
         cached: !forceRefresh && source === 'rpc',
