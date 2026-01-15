@@ -147,10 +147,8 @@ export default function Home() {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-              Real-time DEX depth analysis. Tick-level precision.
-              <br className="hidden sm:block" />
-              V2 · V3 · V4 AMM
+            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-12">
+              See the depth. Trade with clarity.
             </p>
 
             {/* Search Box */}
@@ -207,7 +205,7 @@ export default function Home() {
                 <h2 className="text-4xl sm:text-5xl font-medium tracking-tight mb-6">
                   Built for
                   <br />
-                  <span className="text-[#22c55e]">DeFi Traders</span>
+                  <span className="text-[#22c55e]">Traders</span>
                 </h2>
                 <p className="text-gray-400 text-lg leading-relaxed">
                   Professional-grade liquidity analysis tools.
