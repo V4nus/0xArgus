@@ -256,17 +256,25 @@ export default function Chart({
         // Store last bar for real-time updates
         if (data.length > 0) {
           const lastData = data[data.length - 1];
-          lastBarRef.current = {
-            time: lastData.time,
-            open: lastData.open,
-            high: lastData.high,
-            low: lastData.low,
-            close: lastData.close,
-            volume: lastData.volume,
-          };
-          // Notify parent of initial price
-          if (onPriceUpdate && lastData.close > 0) {
-            onPriceUpdate(lastData.close);
+
+          // CRITICAL FIX: Only update lastBarRef if we don't have a current bar,
+          // or if the historical bar is newer than our current bar
+          // This prevents overwriting live updates with stale historical data
+          const shouldUpdate = !lastBarRef.current || lastBarRef.current.time < lastData.time;
+
+          if (shouldUpdate) {
+            lastBarRef.current = {
+              time: lastData.time,
+              open: lastData.open,
+              high: lastData.high,
+              low: lastData.low,
+              close: lastData.close,
+              volume: lastData.volume,
+            };
+            // Notify parent of initial price
+            if (onPriceUpdate && lastData.close > 0) {
+              onPriceUpdate(lastData.close);
+            }
           }
         }
       } catch { setError('Failed to load chart data'); }
