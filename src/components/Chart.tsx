@@ -97,6 +97,7 @@ export default function Chart({
   const [showLargeOrders, setShowLargeOrders] = useState(true);
   const [largeOrders, setLargeOrders] = useState<LargeOrder[]>([]);
   const maxLiquidityRef = useRef<number>(0); // Track max liquidity for bar width scaling
+  const isInitialLoadRef = useRef<boolean>(true); // Track if this is the first data load
 
   // Handle trade effect trigger from parent
   useEffect(() => {
@@ -220,6 +221,9 @@ export default function Chart({
 
   // Fetch historical OHLCV data
   useEffect(() => {
+    // Reset to initial load when interval changes
+    isInitialLoadRef.current = true;
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -242,7 +246,12 @@ export default function Chart({
 
         candleSeriesRef.current?.setData(candleData);
         volumeSeriesRef.current?.setData(volumeData);
-        mainChartRef.current?.timeScale().fitContent();
+
+        // Only fit content on initial load, not on refresh (preserves user's zoom/pan)
+        if (isInitialLoadRef.current) {
+          mainChartRef.current?.timeScale().fitContent();
+          isInitialLoadRef.current = false;
+        }
 
         // Store last bar for real-time updates
         if (data.length > 0) {
