@@ -94,50 +94,49 @@ export class RealtimePriceService {
   }
 
   private async startStream(chainId: string, tokenAddress: string, key: string) {
-    // Map chain IDs for DexPaprika
-    const networkMap: Record<string, string> = {
-      ethereum: 'ethereum',
-      base: 'base',
-      bsc: 'bsc',
-      arbitrum: 'arbitrum-one',
-      polygon: 'polygon',
-      solana: 'solana',
-    };
-
-    const network = networkMap[chainId] || chainId;
-
-    // Try SSE first
+    // Try our own SSE endpoint first (real-time streaming from backend)
     try {
-      const sseUrl = `https://api.dexpaprika.com/stream?network=${network}&address=${tokenAddress}`;
+      // Use relative URL for same-origin requests
+      const sseUrl = `/api/sse/price?chainId=${encodeURIComponent(chainId)}&address=${encodeURIComponent(tokenAddress)}`;
 
       this.eventSource = new EventSource(sseUrl);
 
       this.eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          const newPrice = data.price_usd || data.price;
 
-          if (newPrice) {
-            this.notifySubscribers(key, newPrice);
+          if (data.type === 'connected') {
+            console.log(`[SSE] Connected to ${key}`);
+          } else if (data.type === 'price' && data.price) {
+            this.notifySubscribers(key, data.price);
+          } else if (data.type === 'error') {
+            console.warn(`[SSE] Server error:`, data.message);
           }
         } catch (e) {
-          console.error('SSE parse error:', e);
+          console.error('[SSE] Parse error:', e);
         }
       };
 
-      this.eventSource.onerror = () => {
-        console.log('SSE connection failed, falling back to polling');
+      this.eventSource.onerror = (error) => {
+        console.log('[SSE] Connection failed, falling back to polling');
         this.eventSource?.close();
+        this.eventSource = null;
         this.startPolling(chainId, tokenAddress, key);
       };
-    } catch {
+
+      this.eventSource.onopen = () => {
+        console.log(`[SSE] Stream opened for ${key}`);
+      };
+    } catch (error) {
+      console.error('[SSE] Failed to connect:', error);
       // Fallback to polling if SSE fails
       this.startPolling(chainId, tokenAddress, key);
     }
   }
 
   private startPolling(chainId: string, tokenAddress: string, key: string) {
-    // Poll DexScreener API every 5 seconds
+    // Poll DexScreener API every 2 seconds for better real-time experience
+    // Still within rate limits: 300 req/min = 5 req/s
     const poll = async () => {
       try {
         const response = await fetch(
@@ -157,8 +156,8 @@ export class RealtimePriceService {
     // Initial fetch
     poll();
 
-    // Set up interval
-    const interval = setInterval(poll, 5000);
+    // Set up interval - 2 seconds for smoother updates
+    const interval = setInterval(poll, 2000);
     this.pollingIntervals.set(key, interval);
   }
 
@@ -292,11 +291,14 @@ export class RealtimePriceService {
     if (!bar || bar.time < currentBarTime) {
       // New bar started
       isNewBar = true;
+      // CRITICAL FIX: New bar's open price should equal previous bar's close price
+      // This prevents price jumps between candles
+      const previousClose = bar?.close ?? price; // Fallback to current price if no previous bar
       bar = {
         time: currentBarTime,
-        open: price,
-        high: price,
-        low: price,
+        open: previousClose,  // ✅ Use previous bar's close as new bar's open
+        high: Math.max(previousClose, price),
+        low: Math.min(previousClose, price),
         close: price,
         volume: 0,
       };
