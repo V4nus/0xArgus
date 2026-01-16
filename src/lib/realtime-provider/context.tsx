@@ -83,45 +83,7 @@ export function RealtimeProvider({ children, pollingInterval = 5000 }: RealtimeP
 
   const getPoolKey = (chainId: string, poolAddress: string) => `${chainId}:${poolAddress}`;
 
-  const subscribeToPool = useCallback((chainId: string, poolAddress: string) => {
-    const key = getPoolKey(chainId, poolAddress);
-
-    if (subscribedPoolsRef.current.has(key)) {
-      return;
-    }
-
-    subscribedPoolsRef.current.add(key);
-
-    // For now, use polling fallback
-    if (usePolling) {
-      // Initial fetch
-      fetchPoolData(chainId, poolAddress);
-      fetchTrades(chainId, poolAddress);
-
-      // Set up polling interval
-      const interval = setInterval(() => {
-        fetchPoolData(chainId, poolAddress);
-        fetchTrades(chainId, poolAddress);
-      }, pollingInterval);
-
-      pollingIntervalsRef.current.set(key, interval);
-    }
-  }, [usePolling, pollingInterval]);
-
-  const unsubscribeFromPool = useCallback((chainId: string, poolAddress: string) => {
-    const key = getPoolKey(chainId, poolAddress);
-
-    subscribedPoolsRef.current.delete(key);
-
-    // Clear polling interval
-    const interval = pollingIntervalsRef.current.get(key);
-    if (interval) {
-      clearInterval(interval);
-      pollingIntervalsRef.current.delete(key);
-    }
-  }, []);
-
-  const fetchPoolData = async (chainId: string, poolAddress: string) => {
+  const fetchPoolData = useCallback(async (chainId: string, poolAddress: string) => {
     const cacheKey = `pool:${chainId}:${poolAddress}`;
     try {
       const result = await fetchWithDedup(cacheKey, async () => {
@@ -147,9 +109,9 @@ export function RealtimeProvider({ children, pollingInterval = 5000 }: RealtimeP
     } catch (error) {
       console.error('Error fetching pool data:', error);
     }
-  };
+  }, []);
 
-  const fetchTrades = async (chainId: string, poolAddress: string) => {
+  const fetchTrades = useCallback(async (chainId: string, poolAddress: string) => {
     const cacheKey = `trades:${chainId}:${poolAddress}`;
     try {
       const result = await fetchWithDedup(cacheKey, async () => {
@@ -168,7 +130,46 @@ export function RealtimeProvider({ children, pollingInterval = 5000 }: RealtimeP
     } catch (error) {
       console.error('Error fetching trades:', error);
     }
-  };
+  }, []);
+
+  const subscribeToPool = useCallback((chainId: string, poolAddress: string) => {
+    const key = getPoolKey(chainId, poolAddress);
+
+    // Prevent duplicate subscriptions
+    if (subscribedPoolsRef.current.has(key)) {
+      return;
+    }
+
+    subscribedPoolsRef.current.add(key);
+
+    // For now, use polling fallback
+    if (usePolling) {
+      // Initial fetch
+      fetchPoolData(chainId, poolAddress);
+      fetchTrades(chainId, poolAddress);
+
+      // Set up polling interval
+      const interval = setInterval(() => {
+        fetchPoolData(chainId, poolAddress);
+        fetchTrades(chainId, poolAddress);
+      }, pollingInterval);
+
+      pollingIntervalsRef.current.set(key, interval);
+    }
+  }, [usePolling, pollingInterval, fetchPoolData, fetchTrades]);
+
+  const unsubscribeFromPool = useCallback((chainId: string, poolAddress: string) => {
+    const key = getPoolKey(chainId, poolAddress);
+
+    subscribedPoolsRef.current.delete(key);
+
+    // Clear polling interval
+    const interval = pollingIntervalsRef.current.get(key);
+    if (interval) {
+      clearInterval(interval);
+      pollingIntervalsRef.current.delete(key);
+    }
+  }, []);
 
   const getPoolData = useCallback((chainId: string, poolAddress: string) => {
     return poolData.get(getPoolKey(chainId, poolAddress));

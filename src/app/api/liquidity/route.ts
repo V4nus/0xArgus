@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLiquidityDepth, getSimpleLiquidity, getV4LiquidityDepth, getV2LiquidityDepth, detectPoolType } from '@/lib/liquidity';
+import { getLiquidityDepth, getSimpleLiquidity, getV4LiquidityDepth, detectPoolType } from '@/lib/liquidity';
 import { getLatestLiquidityFromDb, syncLiquidityDepth, syncPoolInfo } from '@/lib/db-sync';
 
 // Validate EVM address (20 bytes = 40 hex chars + 0x prefix)

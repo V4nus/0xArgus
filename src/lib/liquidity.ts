@@ -1,4 +1,4 @@
-import { createPublicClient, http, formatUnits, parseAbi, encodeFunctionData, decodeFunctionResult } from 'viem';
+import { createPublicClient, http, formatUnits, parseAbi, encodeFunctionData, decodeFunctionResult, type Chain } from 'viem';
 import { base, mainnet, bsc, arbitrum, polygon } from 'viem/chains';
 
 // Simple in-memory cache
@@ -80,8 +80,7 @@ function rotateRpc(chainId: string): void {
   console.log(`Rotated RPC for ${chainId} to index ${rpcIndexes[chainId]}: ${urls[rpcIndexes[chainId]]}`);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CHAINS: Record<string, any> = {
+const CHAINS: Record<string, Chain> = {
   ethereum: mainnet,
   base: base,
   bsc: bsc,

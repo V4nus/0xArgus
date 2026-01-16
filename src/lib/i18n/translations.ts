@@ -149,6 +149,12 @@ export interface Translations {
     remove: string;
     add: string;
   };
+
+  // Liquidity Depth
+  liquidityDepth: {
+    requestTimeout: string;
+    fetchFailed: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -282,6 +288,10 @@ export const translations: Record<Language, Translations> = {
       remove: 'Remove from favorites',
       add: 'Add to favorites',
     },
+    liquidityDepth: {
+      requestTimeout: 'Request timeout - RPC response too slow',
+      fetchFailed: 'Failed to fetch liquidity data',
+    },
   },
 
   // Korean
@@ -413,6 +423,10 @@ export const translations: Record<Language, Translations> = {
       empty: '즐겨찾기 없음',
       remove: '즐겨찾기 제거',
       add: '즐겨찾기 추가',
+    },
+    liquidityDepth: {
+      requestTimeout: '요청 시간 초과 - RPC 응답이 너무 느립니다',
+      fetchFailed: '유동성 데이터를 가져오지 못했습니다',
     },
   },
 
@@ -546,6 +560,10 @@ export const translations: Record<Language, Translations> = {
       remove: 'お気に入りから削除',
       add: 'お気に入りに追加',
     },
+    liquidityDepth: {
+      requestTimeout: 'リクエストタイムアウト - RPC応答が遅すぎます',
+      fetchFailed: '流動性データの取得に失敗しました',
+    },
   },
 
   // Spanish
@@ -677,6 +695,10 @@ export const translations: Record<Language, Translations> = {
       empty: 'Sin favoritos',
       remove: 'Quitar de favoritos',
       add: 'Agregar a favoritos',
+    },
+    liquidityDepth: {
+      requestTimeout: 'Tiempo de espera agotado - Respuesta RPC muy lenta',
+      fetchFailed: 'Error al obtener datos de liquidez',
     },
   },
 
@@ -810,6 +832,10 @@ export const translations: Record<Language, Translations> = {
       remove: 'Remover dos favoritos',
       add: 'Adicionar aos favoritos',
     },
+    liquidityDepth: {
+      requestTimeout: 'Tempo esgotado - Resposta RPC muito lenta',
+      fetchFailed: 'Falha ao obter dados de liquidez',
+    },
   },
 
   // Russian
@@ -941,6 +967,10 @@ export const translations: Record<Language, Translations> = {
       empty: 'Нет избранного',
       remove: 'Удалить из избранного',
       add: 'Добавить в избранное',
+    },
+    liquidityDepth: {
+      requestTimeout: 'Тайм-аут запроса - слишком медленный ответ RPC',
+      fetchFailed: 'Не удалось получить данные о ликвидности',
     },
   },
 };

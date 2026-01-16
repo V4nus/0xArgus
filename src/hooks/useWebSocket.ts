@@ -104,9 +104,19 @@ export function useWebSocket({
         });
 
         // Start ping interval to keep connection alive
+        // Clear any existing ping interval first to prevent memory leaks
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+        }
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
+          } else {
+            // If WebSocket is not open, clear the interval
+            if (pingIntervalRef.current) {
+              clearInterval(pingIntervalRef.current);
+              pingIntervalRef.current = null;
+            }
           }
         }, 30000);
       };
@@ -192,7 +202,18 @@ export function useWebSocket({
 
   useEffect(() => {
     connect();
-    return cleanup;
+    return () => {
+      // Additional cleanup on unmount to ensure no leaks
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      cleanup();
+    };
   }, [connect, cleanup]);
 
   return {

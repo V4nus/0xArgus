@@ -20,8 +20,8 @@ interface CacheEntry<T> {
 }
 
 const POOL_CACHE_TTL = 60000; // 1 minute for pool info
-const OHLCV_CACHE_TTL = 30000; // 30 seconds for OHLCV
-const SEARCH_CACHE_TTL = 30000; // 30 seconds for search
+const OHLCV_CACHE_TTL = 60000; // 1 minute for OHLCV (historical data changes slowly)
+const SEARCH_CACHE_TTL = 60000; // 1 minute for search results
 
 // In-memory cache (works for both SSR and client)
 const memoryCache = new Map<string, CacheEntry<unknown>>();

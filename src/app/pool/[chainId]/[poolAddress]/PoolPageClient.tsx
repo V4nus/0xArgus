@@ -185,7 +185,9 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
       }
     };
 
-    fetchTokenInfo();
+    fetchTokenInfo().catch((err) => {
+      console.error('Unhandled error in fetchTokenInfo:', err);
+    });
   }, [pool.chainId, pool.baseToken.address]);
 
   const explorerUrl = {

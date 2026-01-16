@@ -35,7 +35,6 @@ const EXAMPLE_POOLS = [
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  const t = useTranslations();
 
   useEffect(() => {
     setMounted(true);

@@ -5,6 +5,7 @@ import { DepthData } from '@/lib/liquidity';
 import { formatNumber } from '@/lib/api';
 import { isStablecoin } from '@/lib/quote-prices';
 import { getRealtimeService, TradeEvent } from '@/lib/realtime';
+import { useTranslations } from '@/lib/i18n/context';
 
 // Aggregated order data for Chart sync
 export interface AggregatedOrderData {
@@ -54,6 +55,7 @@ export default function LiquidityDepth({
   onPrecisionChange,
   onOrderDataChange,
 }: LiquidityDepthProps) {
+  const t = useTranslations();
   const [depthData, setDepthData] = useState<DepthData | null>(null);
   const [simpleData, setSimpleData] = useState<{
     token0: number;
@@ -350,7 +352,7 @@ export default function LiquidityDepth({
         if (err instanceof Error && err.name === 'AbortError') {
           // Only show timeout error if this was still the active request
           if (currentRequestId === requestIdRef.current && isInitialLoad.current) {
-            setError('请求超时 - RPC 响应太慢');
+            setError(t.liquidityDepth.requestTimeout);
           }
           return;
         }
@@ -358,7 +360,7 @@ export default function LiquidityDepth({
         console.error('Liquidity fetch error:', err);
         // Don't set error on refresh failures, keep showing old data
         if (isInitialLoad.current && currentRequestId === requestIdRef.current) {
-          setError('获取流动性数据失败');
+          setError(t.liquidityDepth.fetchFailed);
         }
       } finally {
         // Only update state if this is still the active request
@@ -376,8 +378,8 @@ export default function LiquidityDepth({
 
     if (chainId !== 'solana') {
       fetchData();
-      // Update every 3 seconds (API has 5-second cache, so this balances freshness vs performance)
-      const interval = setInterval(fetchData, 3000);
+      // Update every 6 seconds (API has 5-second cache, so we poll slightly after cache expires for fresh data)
+      const interval = setInterval(fetchData, 6000);
       return () => {
         clearInterval(interval);
         // Cancel any pending request on cleanup

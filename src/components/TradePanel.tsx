@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain, useBalance, useReadContract, useWriteContract, useSignTypedData, useSendTransaction, usePublicClient } from 'wagmi';
 import { formatUnits, parseUnits, erc20Abi } from 'viem';
 import { CHAIN_ID_MAP } from '@/lib/wagmi';
@@ -276,6 +276,12 @@ export default function TradePanel({
   const availableBalance = getAvailableBalance();
   const outputBalance = getOutputBalance();
 
+  // Use ref for currentPrice to avoid triggering fetchQuote rebuild
+  const currentPriceRef = useRef(currentPrice);
+  useEffect(() => {
+    currentPriceRef.current = currentPrice;
+  }, [currentPrice]);
+
   // Fetch quote when amount changes
   const fetchQuote = useCallback(async () => {
     const amountNum = parseFloat(amount);
@@ -295,7 +301,7 @@ export default function TradePanel({
 
       // Estimate USD value of trade (rough estimate using quote token if it's a stablecoin)
       // For simplicity, assume quote token is USD-pegged or use current price
-      const estimatedUsd = tradeType === 'buy' ? amountNum : amountNum * currentPrice;
+      const estimatedUsd = tradeType === 'buy' ? amountNum : amountNum * currentPriceRef.current;
 
       // Select aggregator based on trade size
       const selectedAggregator = selectAggregator(estimatedUsd);
@@ -388,7 +394,7 @@ export default function TradePanel({
     } finally {
       setIsLoadingQuote(false);
     }
-  }, [amount, address, isSupportedChain, tradeType, quoteTokenAddress, baseTokenAddress, inputDecimals, targetChainId, slippageBps, currentPrice]);
+  }, [amount, address, isSupportedChain, tradeType, quoteTokenAddress, baseTokenAddress, inputDecimals, targetChainId, slippageBps]);
 
   // Debounce quote fetching
   useEffect(() => {
@@ -639,12 +645,14 @@ export default function TradePanel({
       ]);
 
       // Additional refresh after a short delay to ensure blockchain state is updated
-      setTimeout(async () => {
-        await Promise.all([
+      setTimeout(() => {
+        Promise.all([
           refetchNativeBalance(),
           !isQuoteNative ? refetchQuoteBalance() : Promise.resolve(),
           !isBaseNative ? refetchBaseBalance() : Promise.resolve(),
-        ]);
+        ]).catch((err) => {
+          console.error('Failed to refresh balances after trade:', err);
+        });
       }, 2000);
 
       // Reset form after success

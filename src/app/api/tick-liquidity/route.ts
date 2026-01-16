@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { scanPoolLiquidity, tickToPrice } from '@/lib/tick-liquidity';
+import { scanPoolLiquidity } from '@/lib/tick-liquidity';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

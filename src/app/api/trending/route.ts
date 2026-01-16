@@ -1,5 +1,66 @@
 import { NextResponse } from 'next/server';
 
+// DexScreener API types
+interface BoostedToken {
+  chainId: string;
+  tokenAddress: string;
+  icon?: string;
+  header?: string;
+  description?: string;
+  links?: Array<{ type: string; label: string; url: string }>;
+}
+
+interface DexScreenerPair {
+  chainId?: string;
+  dexId?: string;
+  url?: string;
+  pairAddress?: string;
+  labels?: string[];
+  baseToken?: {
+    address: string;
+    name: string;
+    symbol: string;
+  };
+  quoteToken?: {
+    address: string;
+    name: string;
+    symbol: string;
+  };
+  priceNative?: string;
+  priceUsd?: string;
+  txns?: {
+    m5?: { buys: number; sells: number };
+    h1?: { buys: number; sells: number };
+    h6?: { buys: number; sells: number };
+    h24?: { buys: number; sells: number };
+  };
+  volume?: {
+    h24?: number;
+    h6?: number;
+    h1?: number;
+    m5?: number;
+  };
+  priceChange?: {
+    h24?: number;
+    h6?: number;
+    h1?: number;
+    m5?: number;
+  };
+  liquidity?: {
+    usd?: number;
+    base?: number;
+    quote?: number;
+  };
+  fdv?: number;
+  marketCap?: number;
+  pairCreatedAt?: number;
+  info?: {
+    imageUrl?: string;
+    websites?: Array<{ label: string; url: string }>;
+    socials?: Array<{ type: string; url: string }>;
+  };
+}
+
 // Cache for trending pools data
 interface TrendingPool {
   symbol: string;
@@ -59,11 +120,11 @@ async function fetchBoostedTokens(chainId: string): Promise<TrendingPool[]> {
       return [];
     }
 
-    const boostedTokens = await response.json();
+    const boostedTokens = (await response.json()) as BoostedToken[];
 
     // Filter tokens by chain
     const chainTokens = (boostedTokens || []).filter(
-      (token: any) => token.chainId === config.dexscreenerId
+      (token) => token.chainId === config.dexscreenerId
     );
 
     if (chainTokens.length === 0) {
@@ -72,7 +133,7 @@ async function fetchBoostedTokens(chainId: string): Promise<TrendingPool[]> {
     }
 
     // Get token addresses to fetch pair data
-    const tokenAddresses = chainTokens.slice(0, 30).map((t: any) => t.tokenAddress);
+    const tokenAddresses = chainTokens.slice(0, 30).map((t) => t.tokenAddress);
 
     // Fetch pair data for these tokens
     const pools: TrendingPool[] = [];
@@ -93,8 +154,8 @@ async function fetchBoostedTokens(chainId: string): Promise<TrendingPool[]> {
         );
 
         if (pairResponse.ok) {
-          const pairData = await pairResponse.json();
-          const pairs = pairData || [];
+          const pairData = (await pairResponse.json()) as { pairs?: DexScreenerPair[] };
+          const pairs = pairData.pairs || [];
 
           for (const pair of pairs) {
             if (!pair.pairAddress) continue;
@@ -111,7 +172,7 @@ async function fetchBoostedTokens(chainId: string): Promise<TrendingPool[]> {
               chainLabel: config.label,
               poolAddress: pair.pairAddress || '',
               logo: pair.info?.imageUrl || '',
-              price: parseFloat(pair.priceUsd) || 0,
+              price: parseFloat(pair.priceUsd || '0') || 0,
               change24h: pair.priceChange?.h24 || 0,
               volume24h: pair.volume?.h24 || 0,
               liquidity: liquidity,
@@ -171,9 +232,9 @@ async function fetchTrendingBySearch(chainId: string): Promise<TrendingPool[]> {
         );
 
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as { pairs?: DexScreenerPair[] };
           const pairs = (data.pairs || []).filter(
-            (p: any) => p.chainId === config.dexscreenerId
+            (p) => p.chainId === config.dexscreenerId
           );
 
           for (const pair of pairs.slice(0, 10)) {
@@ -189,7 +250,7 @@ async function fetchTrendingBySearch(chainId: string): Promise<TrendingPool[]> {
               chainLabel: config.label,
               poolAddress: pair.pairAddress || '',
               logo: pair.info?.imageUrl || '',
-              price: parseFloat(pair.priceUsd) || 0,
+              price: parseFloat(pair.priceUsd || '0') || 0,
               change24h: pair.priceChange?.h24 || 0,
               volume24h: pair.volume?.h24 || 0,
               liquidity: liquidity,

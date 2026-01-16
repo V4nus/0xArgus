@@ -117,10 +117,10 @@ async function searchCoinGeckoBySymbol(symbol: string): Promise<string | null> {
     );
 
     if (response.ok) {
-      const data = await response.json();
+      const data = (await response.json()) as { coins?: Array<{ symbol?: string; thumb?: string }> };
       const coins = data.coins || [];
       // Find exact symbol match
-      const match = coins.find((c: any) => c.symbol?.toUpperCase() === symbol.toUpperCase());
+      const match = coins.find((c) => c.symbol?.toUpperCase() === symbol.toUpperCase());
       if (match?.thumb) {
         // Convert thumb to small for better quality
         const imageUrl = match.thumb.replace('/thumb/', '/small/');

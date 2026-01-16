@@ -14,8 +14,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, parseAbi, encodeFunctionData, decodeFunctionResult, formatUnits } from 'viem';
+import { createPublicClient, http, parseAbi, encodeFunctionData, decodeFunctionResult, formatUnits, type PublicClient, type Chain } from 'viem';
 import { base, mainnet, bsc, arbitrum, polygon } from 'viem/chains';
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+  isValidChainId,
+  isValidPoolId,
+  validatePositiveNumber,
+  validatePositiveInteger,
+  validationError,
+} from '@/lib/api-validation';
 
 // ============ Types ============
 
@@ -62,8 +72,7 @@ const RPC_URLS: Record<string, string> = {
   polygon: 'https://polygon-rpc.com',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CHAINS: Record<string, any> = {
+const CHAINS: Record<string, Chain> = {
   ethereum: mainnet,
   base: base,
   bsc: bsc,
@@ -166,8 +175,7 @@ function getTickSpacing(lpFee: number): number {
 // ============ Pool Type Detection ============
 
 async function detectPoolType(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any,
+  client: PublicClient,
   poolAddress: string
 ): Promise<'v2' | 'v3' | 'v4' | 'unknown'> {
   if (isV4PoolId(poolAddress)) return 'v4';
@@ -230,7 +238,7 @@ async function getV4Depth(
     }),
   ]);
 
-  const [sqrtPriceX96, currentTick, , lpFee] = slot0Result as [bigint, number, number, number];
+  const [, currentTick, , lpFee] = slot0Result as [bigint, number, number, number];
   const poolLiquidity = liquidityResult as bigint;
   const tickSpacing = getTickSpacing(lpFee);
   const decimalAdjust = priceUsd > 0 ? calculateDecimalAdjust(priceUsd, currentTick) : 1e12;
@@ -868,16 +876,64 @@ async function getV2Depth(
 // ============ Main Handler ============
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const clientId = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const rateLimit = checkRateLimit(`liquidity-depth:${clientId}`, RATE_LIMITS.liquidity);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetAt);
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const chainId = searchParams.get('chainId');
   const poolAddress = searchParams.get('poolAddress');
-  const priceUsd = parseFloat(searchParams.get('priceUsd') || '0');
-  const maxLevels = parseInt(searchParams.get('maxLevels') || '0');
-  const precision = parseFloat(searchParams.get('precision') || '0');
 
+  // Validate required parameters
   if (!chainId || !poolAddress) {
-    return NextResponse.json({ error: 'Missing required parameters: chainId, poolAddress' }, { status: 400 });
+    return validationError('Missing required parameters: chainId, poolAddress');
   }
+
+  // Validate chainId
+  if (!isValidChainId(chainId)) {
+    return validationError(`Invalid chainId: ${chainId}. Must be one of: ethereum, base, bsc, solana`, 'chainId');
+  }
+
+  // Validate poolAddress format
+  if (!isValidPoolId(poolAddress)) {
+    return validationError('Invalid poolAddress format. Must be a valid Ethereum address or pool ID', 'poolAddress');
+  }
+
+  // Validate and parse priceUsd
+  const priceUsdValidation = validatePositiveNumber(searchParams.get('priceUsd'), {
+    min: 0,
+    max: 1e15, // 1 quadrillion USD max
+    defaultValue: 0,
+  });
+  if (!priceUsdValidation.valid) {
+    return validationError(`Invalid priceUsd: ${priceUsdValidation.error}`, 'priceUsd');
+  }
+  const priceUsd = priceUsdValidation.value;
+
+  // Validate and parse maxLevels
+  const maxLevelsValidation = validatePositiveInteger(searchParams.get('maxLevels'), {
+    min: 0,
+    max: 1000, // Reasonable upper limit
+    defaultValue: 0,
+  });
+  if (!maxLevelsValidation.valid) {
+    return validationError(`Invalid maxLevels: ${maxLevelsValidation.error}`, 'maxLevels');
+  }
+  const maxLevels = maxLevelsValidation.value;
+
+  // Validate and parse precision
+  const precisionValidation = validatePositiveNumber(searchParams.get('precision'), {
+    min: 0,
+    max: 1,
+    defaultValue: 0,
+  });
+  if (!precisionValidation.valid) {
+    return validationError(`Invalid precision: ${precisionValidation.error}`, 'precision');
+  }
+  const precision = precisionValidation.value;
 
   // Check cache
   const cacheKey = `${chainId}-${poolAddress}-${maxLevels}-${precision}`;

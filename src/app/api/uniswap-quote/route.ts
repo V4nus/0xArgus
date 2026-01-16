@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
     const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
 
     let commands: number[] = [];
-    let inputs: `0x${string}`[] = [];
+    const inputs: `0x${string}`[] = [];
 
     if (isNativeIn) {
       // ETH -> Token: WRAP_ETH + V3_SWAP_EXACT_IN
