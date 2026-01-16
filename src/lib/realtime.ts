@@ -94,62 +94,69 @@ export class RealtimePriceService {
   }
 
   private async startStream(chainId: string, tokenAddress: string, key: string) {
-    // Try our own SSE endpoint first (real-time streaming from backend)
-    try {
-      // Use relative URL for same-origin requests
-      const sseUrl = `/api/sse/price?chainId=${encodeURIComponent(chainId)}&address=${encodeURIComponent(tokenAddress)}`;
-
-      this.eventSource = new EventSource(sseUrl);
-
-      this.eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === 'connected') {
-            console.log(`[SSE] Connected to ${key}`);
-          } else if (data.type === 'price' && data.price) {
-            this.notifySubscribers(key, data.price);
-          } else if (data.type === 'error') {
-            console.warn(`[SSE] Server error:`, data.message);
-          }
-        } catch (e) {
-          console.error('[SSE] Parse error:', e);
-        }
-      };
-
-      this.eventSource.onerror = (error) => {
-        console.log('[SSE] Connection failed, falling back to polling');
-        this.eventSource?.close();
-        this.eventSource = null;
-        this.startPolling(chainId, tokenAddress, key);
-      };
-
-      this.eventSource.onopen = () => {
-        console.log(`[SSE] Stream opened for ${key}`);
-      };
-    } catch (error) {
-      console.error('[SSE] Failed to connect:', error);
-      // Fallback to polling if SSE fails
-      this.startPolling(chainId, tokenAddress, key);
-    }
+    // Directly use polling for now (SSE causes issues in development)
+    console.log(`[Realtime] Starting polling stream for ${key}`);
+    this.startPolling(chainId, tokenAddress, key);
   }
 
-  private startPolling(chainId: string, tokenAddress: string, key: string) {
+  private startPolling(chainId: string, address: string, key: string) {
     // Poll DexScreener API every 2 seconds for better real-time experience
     // Still within rate limits: 300 req/min = 5 req/s
+    console.log(`[Polling] Started for chainId=${chainId}, address=${address}`);
+
+    // Determine if address is a pool (40 chars) or token (40 chars)
+    // For now, we'll try both endpoints
+    const isPoolAddress = address.length === 42 && address.startsWith('0x');
+
     const poll = async () => {
       try {
-        const response = await fetch(
-          `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
-        );
-        const data = await response.json();
-        const pair = data.pairs?.find((p: { chainId: string }) => p.chainId === chainId);
+        let price: number | null = null;
 
-        if (pair?.priceUsd) {
-          this.notifySubscribers(key, parseFloat(pair.priceUsd));
+        // Try pool-specific endpoint first (more accurate for specific pool)
+        if (isPoolAddress) {
+          try {
+            const poolResponse = await fetch(
+              `https://api.dexscreener.com/latest/dex/pairs/${chainId}/${address}`
+            );
+            const poolData = await poolResponse.json();
+
+            if (poolData.pair?.priceUsd) {
+              price = parseFloat(poolData.pair.priceUsd);
+              console.log(`[Polling] Pool price for ${key}: $${price.toFixed(8)}`);
+            }
+          } catch (poolError) {
+            console.warn('[Polling] Pool endpoint failed, trying token endpoint');
+          }
+        }
+
+        // Fallback to token endpoint if pool endpoint failed
+        if (price === null) {
+          const tokenResponse = await fetch(
+            `https://api.dexscreener.com/latest/dex/tokens/${address}`
+          );
+          const tokenData = await tokenResponse.json();
+
+          console.log(`[Polling] Received ${tokenData.pairs?.length || 0} pairs for ${address}`);
+
+          const pair = tokenData.pairs?.find((p: { chainId: string }) => p.chainId === chainId);
+
+          if (pair?.priceUsd) {
+            price = parseFloat(pair.priceUsd);
+            console.log(`[Polling] Token price for ${key}: $${price.toFixed(8)}`);
+          } else {
+            console.warn(`[Polling] No matching pair found for chainId=${chainId}`);
+            if (tokenData.pairs && tokenData.pairs.length > 0) {
+              console.log('[Polling] Available chainIds:', tokenData.pairs.map((p: any) => p.chainId).join(', '));
+            }
+          }
+        }
+
+        // Notify subscribers if we got a price
+        if (price !== null) {
+          this.notifySubscribers(key, price);
         }
       } catch (e) {
-        console.error('Polling error:', e);
+        console.error('[Polling] Error:', e);
       }
     };
 

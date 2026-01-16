@@ -281,7 +281,9 @@ export default function Chart({
 
   // Subscribe to real-time price updates for live K-line
   useEffect(() => {
-    if (!baseTokenAddress) return;
+    // CRITICAL FIX: Use poolAddress instead of baseTokenAddress
+    // This ensures real-time updates use the same pool as historical data
+    if (!poolAddress) return;
 
     const service = getRealtimeService();
 
@@ -312,7 +314,7 @@ export default function Chart({
 
     const unsubscribe = service.subscribeOHLCV(
       chainId,
-      baseTokenAddress,
+      poolAddress,  // ✅ Changed from baseTokenAddress to poolAddress
       interval,
       lastBarRef.current,
       handleOHLCVUpdate
@@ -322,7 +324,7 @@ export default function Chart({
       unsubscribe();
       setIsLive(false);
     };
-  }, [chainId, baseTokenAddress, interval]);
+  }, [chainId, poolAddress, interval]);  // ✅ Changed dependency from baseTokenAddress to poolAddress
 
 
   // Track current price for triggering large orders fetch
