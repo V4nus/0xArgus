@@ -1,13 +1,114 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { createTextureWorker, generateNormalMap, generateFoamTexture } from '@/lib/texture-worker';
 
 export default function OceanBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [texturesReady, setTexturesReady] = useState(false);
+  const normalTextureRef = useRef<THREE.DataTexture | null>(null);
+  const foamTextureRef = useRef<THREE.DataTexture | null>(null);
+
+  // Generate textures in Web Worker (non-blocking)
+  useEffect(() => {
+    const normalMapSize = 1024;
+    const foamSize = 512;
+    let pendingTextures = 2;
+
+    const worker = createTextureWorker();
+
+    const handleTextureReady = () => {
+      pendingTextures--;
+      if (pendingTextures === 0) {
+        setTexturesReady(true);
+      }
+    };
+
+    if (worker) {
+      // Use Web Worker for texture generation
+      worker.onmessage = (e) => {
+        const { type, data, size } = e.data;
+
+        if (type === 'normalMap') {
+          const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(20, 20);
+          texture.needsUpdate = true;
+          normalTextureRef.current = texture;
+          handleTextureReady();
+        } else if (type === 'foamTexture') {
+          const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(30, 30);
+          texture.needsUpdate = true;
+          foamTextureRef.current = texture;
+          handleTextureReady();
+        }
+      };
+
+      // Request texture generation
+      worker.postMessage({ type: 'generateNormalMap', size: normalMapSize });
+      worker.postMessage({ type: 'generateFoamTexture', size: foamSize });
+
+      return () => worker.terminate();
+    } else {
+      // Fallback: generate on main thread (requestIdleCallback to not block)
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          const normalData = generateNormalMap(normalMapSize);
+          const normalTexture = new THREE.DataTexture(normalData, normalMapSize, normalMapSize, THREE.RGBAFormat);
+          normalTexture.wrapS = THREE.RepeatWrapping;
+          normalTexture.wrapT = THREE.RepeatWrapping;
+          normalTexture.repeat.set(20, 20);
+          normalTexture.needsUpdate = true;
+          normalTextureRef.current = normalTexture;
+          handleTextureReady();
+        });
+
+        requestIdleCallback(() => {
+          const foamData = generateFoamTexture(foamSize);
+          const foamTexture = new THREE.DataTexture(foamData, foamSize, foamSize, THREE.RGBAFormat);
+          foamTexture.wrapS = THREE.RepeatWrapping;
+          foamTexture.wrapT = THREE.RepeatWrapping;
+          foamTexture.repeat.set(30, 30);
+          foamTexture.needsUpdate = true;
+          foamTextureRef.current = foamTexture;
+          handleTextureReady();
+        });
+      } else {
+        // Last resort: setTimeout to defer
+        setTimeout(() => {
+          const normalData = generateNormalMap(normalMapSize);
+          const normalTexture = new THREE.DataTexture(normalData, normalMapSize, normalMapSize, THREE.RGBAFormat);
+          normalTexture.wrapS = THREE.RepeatWrapping;
+          normalTexture.wrapT = THREE.RepeatWrapping;
+          normalTexture.repeat.set(20, 20);
+          normalTexture.needsUpdate = true;
+          normalTextureRef.current = normalTexture;
+          handleTextureReady();
+
+          const foamData = generateFoamTexture(foamSize);
+          const foamTexture = new THREE.DataTexture(foamData, foamSize, foamSize, THREE.RGBAFormat);
+          foamTexture.wrapS = THREE.RepeatWrapping;
+          foamTexture.wrapT = THREE.RepeatWrapping;
+          foamTexture.repeat.set(30, 30);
+          foamTexture.needsUpdate = true;
+          foamTextureRef.current = foamTexture;
+          handleTextureReady();
+        }, 0);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !texturesReady) return;
+
+    const normalTexture = normalTextureRef.current;
+    const foamTexture = foamTextureRef.current;
+    if (!normalTexture || !foamTexture) return;
 
     const container = containerRef.current;
 
@@ -98,112 +199,6 @@ export default function OceanBackground() {
     renderer.toneMappingExposure = 1.1;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
-
-    // Generate procedural normal map for micro-detail
-    const normalMapSize = 1024;
-    const normalCanvas = document.createElement('canvas');
-    normalCanvas.width = normalMapSize;
-    normalCanvas.height = normalMapSize;
-    const normalCtx = normalCanvas.getContext('2d')!;
-    const normalImageData = normalCtx.createImageData(normalMapSize, normalMapSize);
-
-    // Perlin-like noise for normal map
-    const noise = (x: number, y: number, seed: number) => {
-      const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
-      return n - Math.floor(n);
-    };
-
-    const smoothNoise = (x: number, y: number, scale: number, seed: number) => {
-      const i = Math.floor(x * scale);
-      const j = Math.floor(y * scale);
-      const fx = x * scale - i;
-      const fy = y * scale - j;
-
-      const a = noise(i, j, seed);
-      const b = noise(i + 1, j, seed);
-      const c = noise(i, j + 1, seed);
-      const d = noise(i + 1, j + 1, seed);
-
-      const ux = fx * fx * (3 - 2 * fx);
-      const uy = fy * fy * (3 - 2 * fy);
-
-      return a * (1 - ux) * (1 - uy) + b * ux * (1 - uy) + c * (1 - ux) * uy + d * ux * uy;
-    };
-
-    for (let y = 0; y < normalMapSize; y++) {
-      for (let x = 0; x < normalMapSize; x++) {
-        const u = x / normalMapSize;
-        const v = y / normalMapSize;
-
-        // Multi-octave noise
-        let height = 0;
-        height += smoothNoise(u, v, 8, 0) * 0.5;
-        height += smoothNoise(u, v, 16, 1) * 0.25;
-        height += smoothNoise(u, v, 32, 2) * 0.125;
-        height += smoothNoise(u, v, 64, 3) * 0.0625;
-
-        // Calculate normal from height differences
-        const delta = 1 / normalMapSize;
-        const hL = smoothNoise(u - delta, v, 8, 0) * 0.5 + smoothNoise(u - delta, v, 16, 1) * 0.25;
-        const hR = smoothNoise(u + delta, v, 8, 0) * 0.5 + smoothNoise(u + delta, v, 16, 1) * 0.25;
-        const hD = smoothNoise(u, v - delta, 8, 0) * 0.5 + smoothNoise(u, v - delta, 16, 1) * 0.25;
-        const hU = smoothNoise(u, v + delta, 8, 0) * 0.5 + smoothNoise(u, v + delta, 16, 1) * 0.25;
-
-        const nx = (hL - hR) * 2;
-        const ny = (hD - hU) * 2;
-        const nz = 1;
-
-        const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-
-        const idx = (y * normalMapSize + x) * 4;
-        normalImageData.data[idx] = ((nx / len) * 0.5 + 0.5) * 255;
-        normalImageData.data[idx + 1] = ((ny / len) * 0.5 + 0.5) * 255;
-        normalImageData.data[idx + 2] = ((nz / len) * 0.5 + 0.5) * 255;
-        normalImageData.data[idx + 3] = 255;
-      }
-    }
-    normalCtx.putImageData(normalImageData, 0, 0);
-
-    const normalTexture = new THREE.CanvasTexture(normalCanvas);
-    normalTexture.wrapS = THREE.RepeatWrapping;
-    normalTexture.wrapT = THREE.RepeatWrapping;
-    normalTexture.repeat.set(20, 20);
-
-    // Generate foam texture
-    const foamSize = 512;
-    const foamCanvas = document.createElement('canvas');
-    foamCanvas.width = foamSize;
-    foamCanvas.height = foamSize;
-    const foamCtx = foamCanvas.getContext('2d')!;
-    const foamImageData = foamCtx.createImageData(foamSize, foamSize);
-
-    for (let y = 0; y < foamSize; y++) {
-      for (let x = 0; x < foamSize; x++) {
-        const u = x / foamSize;
-        const v = y / foamSize;
-
-        let foam = 0;
-        foam += smoothNoise(u, v, 12, 10) * 0.4;
-        foam += smoothNoise(u, v, 24, 11) * 0.3;
-        foam += smoothNoise(u, v, 48, 12) * 0.2;
-        foam += smoothNoise(u, v, 96, 13) * 0.1;
-
-        foam = Math.pow(foam, 1.5);
-        foam = foam > 0.35 ? 1.0 : 0.0;
-
-        const idx = (y * foamSize + x) * 4;
-        foamImageData.data[idx] = foam * 255;
-        foamImageData.data[idx + 1] = foam * 255;
-        foamImageData.data[idx + 2] = foam * 255;
-        foamImageData.data[idx + 3] = 255;
-      }
-    }
-    foamCtx.putImageData(foamImageData, 0, 0);
-
-    const foamTexture = new THREE.CanvasTexture(foamCanvas);
-    foamTexture.wrapS = THREE.RepeatWrapping;
-    foamTexture.wrapT = THREE.RepeatWrapping;
-    foamTexture.repeat.set(30, 30);
 
     // Ultra-realistic ocean shader
     const oceanMaterial = new THREE.ShaderMaterial({
@@ -530,7 +525,7 @@ export default function OceanBackground() {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [texturesReady]);
 
   return (
     <div

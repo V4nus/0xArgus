@@ -10,42 +10,32 @@ import TokenLogo, { TokenPairLogos } from '@/components/TokenLogo';
 import { useRouter } from 'next/navigation';
 import { addToSearchHistory, getSearchHistory, SearchHistoryItem } from '@/lib/search-history';
 import { isFavorite, toggleFavorite, getFavorites, FavoriteItem } from '@/lib/favorites';
+import {
+  ChartSkeleton,
+  OrderBookSkeleton,
+  TradePanelSkeleton,
+  TradeHistorySkeleton,
+} from '@/components/Skeleton';
 
-// Dynamic imports for client components
+// Dynamic imports with skeleton loaders for better perceived performance
 const Chart = dynamic(() => import('@/components/Chart'), {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#0d1117]">
-      <div className="text-gray-400 animate-pulse">Loading chart...</div>
-    </div>
-  ),
+  loading: () => <ChartSkeleton />,
 });
 
 const LiquidityDepth = dynamic(() => import('@/components/LiquidityDepth'), {
   ssr: false,
-  loading: () => (
-    <div className="p-4 bg-[#161b22] rounded-lg border border-[#30363d]">
-      <div className="text-center text-gray-400 animate-pulse">Loading...</div>
-    </div>
-  ),
+  loading: () => <OrderBookSkeleton />,
 });
 
 const TradeHistory = dynamic(() => import('@/components/TradeHistory'), {
   ssr: false,
-  loading: () => (
-    <div className="p-4 bg-[#161b22] rounded-lg border border-[#30363d]">
-      <div className="text-center text-gray-400 animate-pulse">Loading trades...</div>
-    </div>
-  ),
+  loading: () => <TradeHistorySkeleton />,
 });
 
 const TradePanel = dynamic(() => import('@/components/TradePanel'), {
   ssr: false,
-  loading: () => (
-    <div className="bg-[#161b22] rounded-lg border border-[#30363d] p-3">
-      <div className="text-center text-gray-400 animate-pulse">Loading...</div>
-    </div>
-  ),
+  loading: () => <TradePanelSkeleton />,
 });
 
 const WalletButton = dynamic(() => import('@/components/WalletButton'), {
@@ -194,50 +184,52 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
     return SUPPORTED_CHAINS.find((c) => c.id === chainId)?.icon || '🔗';
   };
 
-  // Fetch deployer address and holders count
+  // Fetch deployer address and holders count (parallel)
   useEffect(() => {
     const fetchTokenInfo = async () => {
       // Only fetch for EVM chains (not Solana)
       if (pool.chainId === 'solana') return;
 
-      try {
-        // Fetch contract creation info from block explorer API
-        const explorerApiUrls: Record<string, string> = {
-          base: 'https://api.basescan.org/api',
-          ethereum: 'https://api.etherscan.io/api',
-          bsc: 'https://api.bscscan.com/api',
-          arbitrum: 'https://api.arbiscan.io/api',
-          polygon: 'https://api.polygonscan.com/api',
-        };
+      const explorerApiUrls: Record<string, string> = {
+        base: 'https://api.basescan.org/api',
+        ethereum: 'https://api.etherscan.io/api',
+        bsc: 'https://api.bscscan.com/api',
+        arbitrum: 'https://api.arbiscan.io/api',
+        polygon: 'https://api.polygonscan.com/api',
+      };
 
-        const apiUrl = explorerApiUrls[pool.chainId];
-        if (!apiUrl) return;
+      const apiUrl = explorerApiUrls[pool.chainId];
+      if (!apiUrl) return;
 
+      // Fetch both APIs in parallel
+      const [creatorResult, holdersResult] = await Promise.allSettled([
         // Get contract creator (deployer)
-        const creatorResponse = await fetch(
-          `${apiUrl}?module=contract&action=getcontractcreation&contractaddresses=${pool.baseToken.address}`
-        );
-        const creatorData = await creatorResponse.json();
+        fetch(`${apiUrl}?module=contract&action=getcontractcreation&contractaddresses=${pool.baseToken.address}`)
+          .then(res => res.json()),
+        // Get token holders count (ERC20)
+        fetch(`${apiUrl}?module=token&action=tokeninfo&contractaddress=${pool.baseToken.address}`)
+          .then(res => res.json()),
+      ]);
+
+      // Process creator result
+      if (creatorResult.status === 'fulfilled') {
+        const creatorData = creatorResult.value;
         if (creatorData.status === '1' && creatorData.result?.[0]?.contractCreator) {
           setDeployerAddress(creatorData.result[0].contractCreator);
         }
+      }
 
-        // Get token holders count (ERC20)
-        // Note: This requires a paid API key for most explorers, so we'll use a fallback
-        const holdersResponse = await fetch(
-          `${apiUrl}?module=token&action=tokeninfo&contractaddress=${pool.baseToken.address}`
-        );
-        const holdersData = await holdersResponse.json();
+      // Process holders result
+      if (holdersResult.status === 'fulfilled') {
+        const holdersData = holdersResult.value;
         if (holdersData.status === '1' && holdersData.result?.[0]?.holdersCount) {
           setHoldersCount(parseInt(holdersData.result[0].holdersCount));
         }
-      } catch (error) {
-        console.error('Failed to fetch token info:', error);
       }
     };
 
     fetchTokenInfo().catch((err) => {
-      console.error('Unhandled error in fetchTokenInfo:', err);
+      console.error('Failed to fetch token info:', err);
     });
   }, [pool.chainId, pool.baseToken.address]);
 

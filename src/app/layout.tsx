@@ -6,17 +6,19 @@ import { I18nProvider } from "@/lib/i18n";
 import { RealtimeProvider } from "@/lib/realtime-provider";
 
 // IBM Plex Sans - Similar to Binance's font
+// Optimized: Only load weights we actually use
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-ibm-plex-sans",
   display: "swap",
 });
 
 // IBM Plex Mono - For numbers and code
+// Optimized: Minimal weights for monospace
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500"],
   variable: "--font-ibm-plex-mono",
   display: "swap",
 });

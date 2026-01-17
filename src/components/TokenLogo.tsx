@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Image from 'next/image';
 
 // Well-known token logos (chain-agnostic by symbol)
@@ -63,7 +63,7 @@ interface TokenLogoProps {
   className?: string;
 }
 
-export default function TokenLogo({
+function TokenLogo({
   symbol,
   imageUrl,
   chainId,
@@ -132,6 +132,17 @@ export default function TokenLogo({
     </div>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export default memo(TokenLogo, (prevProps, nextProps) => {
+  return (
+    prevProps.symbol === nextProps.symbol &&
+    prevProps.imageUrl === nextProps.imageUrl &&
+    prevProps.chainId === nextProps.chainId &&
+    prevProps.size === nextProps.size &&
+    prevProps.className === nextProps.className
+  );
+});
 
 // Paired token logos component (for trading pairs)
 interface TokenPairLogosProps {
