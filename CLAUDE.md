@@ -54,18 +54,20 @@ npm run sync:watch   # Continuous sync with 2-hour interval
   - **Advanced**: `large-trades`, `trending`, `uniswap-quote`, `tx-amounts`
   - **LP Data**: `lp-positions`, `lp-positions/stream`, `lp-positions/sync`
   - **Utilities**: `quote-price`, `token-icon`, `sync`
-- `src/components/` - React components (19 components, ~6,760 lines)
+- `src/components/` - React components (20 components, ~7,000 lines)
   - **Trading**: `TradePanel` (1,518 lines), `Chart` (795 lines), `LiquidityDepth` (1,131 lines)
-  - **3D Viz**: `OceanBackground`, `LiquidityVisualization3D`, `ParticleField`
+  - **3D Viz**: `OceanBackground` (Web Worker textures), `LiquidityVisualization3D`, `ParticleField`
   - **Data Display**: `TradeHistory`, `PoolStats`, `LiquidityInfo`, `RealtimePrice`
-  - **Search/Nav**: `SearchBox`, `LiquidityShowcase`, `TokenLogo`
+  - **Search/Nav**: `SearchBox`, `LiquidityShowcase`, `TokenLogo` (memoized)
   - **Wallet**: `WalletButton`, `WalletProvider`, `ConnectionStatus`
-- `src/lib/` - Core business logic (17 modules, ~7,090 lines)
+  - **Loading**: `Skeleton` (chart, order book, trade panel, history skeletons)
+- `src/lib/` - Core business logic (21 modules, ~7,600 lines)
   - **Blockchain**: `liquidity.ts` (1,407 lines), `tick-liquidity.ts` (476 lines), `cow.ts` (445 lines), `uniswap.ts`
   - **Data Services**: `api.ts`, `ohlcv-service.ts`, `dune.ts` (648 lines), `realtime.ts`
   - **Database**: `db.ts`, `db-sync.ts`, `lp-database.ts`, `lp-positions.ts`
   - **i18n**: `i18n/translations.ts` (976 lines), `i18n/context.tsx`
   - **Charts**: `chart-primitives/` - Custom TradingView primitives
+  - **Utilities**: `cache-utils.ts`, `validators.ts`, `errors.ts`, `texture-worker.ts`
 - `src/hooks/` - React hooks (3 hooks)
   - `useWebSocket.ts` (216 lines) - Auto-reconnect WebSocket
   - `useRealtimePrice.ts` - Real-time price with polling fallback
@@ -491,11 +493,34 @@ Auto-switches to backup RPC on failure.
 
 ## Performance Optimizations
 
+### Build & Runtime
 1. **Next.js App Router**: Automatic code splitting
 2. **React 19 Compiler**: Optimized re-renders
 3. **Image Optimization**: Next.js Image component
-4. **Font Loading**: next/font with display swap
+4. **Font Loading**: next/font with display swap, minimal weights
 5. **API Caching**: Multi-layer cache strategy
 6. **Database Indexing**: Optimized queries on hot paths
 7. **Multicall Batching**: Reduced RPC calls
 8. **Lazy Loading**: Three.js components load on-demand
+
+### Component Optimizations
+9. **React.memo**: Applied to frequently re-rendered components
+   - `TokenLogo` with custom comparison function
+   - Skeleton components for loading states
+10. **Web Worker Texture Generation**: OceanBackground generates 3D textures in background thread
+    - Normal map (1024x1024) and foam texture (512x512) generated off main thread
+    - Falls back to `requestIdleCallback` if Workers unavailable
+    - File: [src/lib/texture-worker.ts](src/lib/texture-worker.ts)
+11. **Parallel API Requests**: Multiple fetch calls use `Promise.allSettled()`
+    - PoolPageClient fetches deployer + holders data in parallel
+12. **Skeleton Loading**: Improves perceived performance during component hydration
+    - `ChartSkeleton`, `OrderBookSkeleton`, `TradePanelSkeleton`, `TradeHistorySkeleton`
+    - File: [src/components/Skeleton.tsx](src/components/Skeleton.tsx)
+
+### Utility Libraries
+- **Cache Utils**: Unified cache management with TTL and auto-cleanup
+  - File: [src/lib/cache-utils.ts](src/lib/cache-utils.ts)
+- **Validators**: Common validation functions for addresses, numbers, chains
+  - File: [src/lib/validators.ts](src/lib/validators.ts)
+- **Error Handling**: Centralized error classes and logging
+  - File: [src/lib/errors.ts](src/lib/errors.ts)
