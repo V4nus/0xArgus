@@ -8,15 +8,97 @@ const X402_NETWORK = process.env.X402_NETWORK === 'mainnet' ? 'eip155:8453' : 'e
 // USDC on Base
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-// API 定价 (以 USDC 最小单位，6位小数)
+// API 定价和 Bazaar 扩展配置 (以 USDC 最小单位，6位小数)
 const PRICING = {
   '/api/x402/orderbook': {
     amount: '1000', // $0.001 = 1000 units (6 decimals)
-    description: 'Order Book API - Real-time bid/ask liquidity depth data',
+    description: 'Order Book API - Real-time bid/ask liquidity depth data for DEX pools',
+    bazaar: {
+      discoverable: true,
+      category: 'defi',
+      tags: ['orderbook', 'liquidity', 'dex', 'trading'],
+      info: {
+        input: {
+          type: 'http',
+          method: 'GET',
+          queryParams: {
+            chainId: 'base',
+            poolAddress: '0x...',
+          },
+        },
+        output: {
+          type: 'json',
+          example: {
+            bids: [{ price: 0.00395, tokenAmount: 18987341.5, liquidityUSD: 74997 }],
+            asks: [{ price: 0.00405, tokenAmount: 2750617.3, liquidityUSD: 11136 }],
+            stats: { totalBidLiquidity: 74997, totalAskLiquidity: 453187, spread: 0.0001 },
+          },
+        },
+      },
+      schema: {
+        input: {
+          type: 'object',
+          properties: {
+            chainId: { type: 'string', description: 'Chain identifier (e.g., base, ethereum, solana)' },
+            poolAddress: { type: 'string', description: 'Pool contract address' },
+          },
+          required: ['chainId', 'poolAddress'],
+        },
+        output: {
+          type: 'object',
+          properties: {
+            bids: { type: 'array', description: 'Bid orders sorted by price descending' },
+            asks: { type: 'array', description: 'Ask orders sorted by price ascending' },
+            stats: { type: 'object', description: 'Aggregated statistics' },
+          },
+        },
+      },
+    },
   },
   '/api/x402/liquidity-depth': {
     amount: '2000', // $0.002 = 2000 units (6 decimals)
-    description: 'Liquidity Depth API - Cumulative liquidity curves with price impact',
+    description: 'Liquidity Depth API - Cumulative liquidity curves with price impact analysis',
+    bazaar: {
+      discoverable: true,
+      category: 'defi',
+      tags: ['liquidity', 'depth', 'price-impact', 'dex'],
+      info: {
+        input: {
+          type: 'http',
+          method: 'GET',
+          queryParams: {
+            chainId: 'base',
+            poolAddress: '0x...',
+          },
+        },
+        output: {
+          type: 'json',
+          example: {
+            bidCurve: [{ price: 0.00395, cumulativeLiquidityUSD: 74997, priceImpactPercent: 1.2 }],
+            askCurve: [{ price: 0.00405, cumulativeLiquidityUSD: 11136, priceImpactPercent: 1.5 }],
+            stats: { liquidityAt1PercentBid: 25000, liquidityAt5PercentBid: 120000 },
+          },
+        },
+      },
+      schema: {
+        input: {
+          type: 'object',
+          properties: {
+            chainId: { type: 'string', description: 'Chain identifier (e.g., base, ethereum, solana)' },
+            poolAddress: { type: 'string', description: 'Pool contract address' },
+          },
+          required: ['chainId', 'poolAddress'],
+        },
+        output: {
+          type: 'object',
+          properties: {
+            bidCurve: { type: 'array', description: 'Cumulative bid liquidity curve' },
+            askCurve: { type: 'array', description: 'Cumulative ask liquidity curve' },
+            stats: { type: 'object', description: 'Depth statistics at various price impact levels' },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -24,10 +106,12 @@ function isX402Configured(): boolean {
   return X402_PAY_TO_ADDRESS !== '0x0000000000000000000000000000000000000000';
 }
 
-// 创建 402 Payment Required 响应
-function createPaymentRequiredResponse(path: string) {
+// 创建 402 Payment Required 响应 (带 Bazaar 扩展)
+function createPaymentRequiredResponse(path: string, baseUrl: string) {
   const pricing = PRICING[path as keyof typeof PRICING];
   if (!pricing) return null;
+
+  const fullUrl = `${baseUrl}${path}`;
 
   const paymentRequired = {
     x402Version: 2,
@@ -44,9 +128,13 @@ function createPaymentRequiredResponse(path: string) {
       },
     ],
     resource: {
-      url: path,
+      url: fullUrl,
       description: pricing.description,
       mimeType: 'application/json',
+    },
+    // Bazaar 扩展 - 用于 x402scan 发现和 UI 展示
+    extensions: {
+      bazaar: pricing.bazaar,
     },
   };
 
@@ -87,8 +175,13 @@ export async function middleware(request: NextRequest) {
 
     // 检查是否有有效支付
     if (!hasValidPayment(request)) {
+      // 构建基础 URL
+      const protocol = request.headers.get('x-forwarded-proto') || 'https';
+      const host = request.headers.get('host') || '0x-argus.vercel.app';
+      const baseUrl = `${protocol}://${host}`;
+
       // 返回 402 Payment Required
-      const paymentResponse = createPaymentRequiredResponse(pathname);
+      const paymentResponse = createPaymentRequiredResponse(pathname, baseUrl);
       if (paymentResponse) {
         return paymentResponse;
       }

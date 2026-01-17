@@ -633,7 +633,7 @@ function APIProductsSection() {
       price: '$0.001',
       endpoint: '/api/x402/orderbook',
       features: ['Real-time data', 'Multi-chain support', 'V2/V3/V4 pools'],
-      example: `curl "https://0xargus.xyz/api/x402/orderbook?chainId=base&poolAddress=0x..."`,
+      example: `curl "https://0x-argus.vercel.app/api/x402/orderbook?chainId=base&poolAddress=0x..."`,
       responsePreview: {
         bids: [{ price: 0.00395, liquidityUSD: 74997 }],
         asks: [{ price: 0.00405, liquidityUSD: 11136 }],
@@ -647,7 +647,7 @@ function APIProductsSection() {
       price: '$0.002',
       endpoint: '/api/x402/liquidity-depth',
       features: ['Cumulative curves', 'Price impact %', 'Depth metrics'],
-      example: `curl "https://0xargus.xyz/api/x402/liquidity-depth?chainId=base&poolAddress=0x..."`,
+      example: `curl "https://0x-argus.vercel.app/api/x402/liquidity-depth?chainId=base&poolAddress=0x..."`,
       responsePreview: {
         bidCurve: [{ price: 0.00395, cumulativeLiquidityUSD: 74997, priceImpactPercent: 1.2 }],
         askCurve: [{ price: 0.00405, cumulativeLiquidityUSD: 11136, priceImpactPercent: 1.5 }],
