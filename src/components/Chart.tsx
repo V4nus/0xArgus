@@ -25,15 +25,77 @@ interface LargeOrder {
   liquidityUSD: number;
   type: 'bid' | 'ask';  // bid = buy order, ask = sell order
   rank: number;  // 1-5, closer to current price = lower rank (more important)
-  percentageAboveAvg: number;
-  token0Amount: number;  // Base token amount
-  token1Amount: number;  // Quote token amount
 }
 
-// Aggregated order data from Order Book
+// Raw order data from Order Book (Chart will aggregate using its own precision)
 interface OrderBookData {
-  bids: Array<{ price: number; liquidityUSD: number }>;
-  asks: Array<{ price: number; liquidityUSD: number }>;
+  bids: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }>;
+  asks: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }>;
+}
+
+// Calculate dynamic precision options based on price
+function getPrecisionOptions(price: number): number[] {
+  if (!price || price <= 0) return [0.0001, 0.001, 0.01, 0.1];
+  const magnitude = Math.floor(Math.log10(price));
+  const base = Math.pow(10, magnitude - 3);
+  return [
+    Number(base.toPrecision(1)),           // Very fine
+    Number((base * 10).toPrecision(1)),    // Fine
+    Number((base * 100).toPrecision(1)),   // Medium
+    Number((base * 1000).toPrecision(1))   // Coarse
+  ];
+}
+
+// Aggregate order data by precision
+function aggregateOrderData(
+  data: OrderBookData,
+  precision: number
+): { bids: Array<{ price: number; liquidityUSD: number }>; asks: Array<{ price: number; liquidityUSD: number }> } {
+  const floorToLevel = (price: number) => {
+    const floored = Math.floor(price / precision) * precision;
+    return floored > 0 ? floored : Math.min(price, precision / 10);
+  };
+  const ceilToLevel = (price: number) => {
+    const ceiled = Math.ceil(price / precision) * precision;
+    return ceiled > 0 ? ceiled : Math.min(price, precision / 10);
+  };
+
+  // Aggregate bids
+  const bidMap = new Map<number, number>();
+  for (const bid of data.bids) {
+    const level = floorToLevel(bid.price);
+    if (level <= 0) continue;
+    bidMap.set(level, (bidMap.get(level) || 0) + bid.liquidityUSD);
+  }
+
+  // Aggregate asks
+  const askMap = new Map<number, number>();
+  for (const ask of data.asks) {
+    const level = ceilToLevel(ask.price);
+    if (level <= 0) continue;
+    askMap.set(level, (askMap.get(level) || 0) + ask.liquidityUSD);
+  }
+
+  return {
+    bids: Array.from(bidMap.entries())
+      .map(([price, liquidityUSD]) => ({ price, liquidityUSD }))
+      .sort((a, b) => b.price - a.price),
+    asks: Array.from(askMap.entries())
+      .map(([price, liquidityUSD]) => ({ price, liquidityUSD }))
+      .sort((a, b) => a.price - b.price),
+  };
+}
+
+// Format precision for display
+function formatPrecision(precision: number): string {
+  if (precision >= 1) return precision.toFixed(0);
+  const str = precision.toString();
+  if (str.includes('e')) {
+    const exp = parseInt(str.split('e')[1]);
+    return precision.toFixed(Math.abs(exp));
+  }
+  const decimals = str.split('.')[1]?.length || 0;
+  return precision.toFixed(decimals);
 }
 
 interface ChartProps {
@@ -46,6 +108,7 @@ interface ChartProps {
   tradeEffect?: TradeEffectType;
   onTradeEffectComplete?: () => void;
   onPriceUpdate?: (price: number) => void;
+  onIntervalChange?: (interval: TimeInterval) => void; // Callback when timeframe changes
   token0Decimals?: number;
   token1Decimals?: number;
   token0Symbol?: string;
@@ -71,6 +134,7 @@ export default function Chart({
   tradeEffect,
   onTradeEffectComplete,
   onPriceUpdate,
+  onIntervalChange,
   token0Decimals = 18,
   token1Decimals = 18,
   token0Symbol = 'Token0',
@@ -96,8 +160,16 @@ export default function Chart({
   const [tradeEffectY, setTradeEffectY] = useState<number | null>(null);
   const [showLargeOrders, setShowLargeOrders] = useState(true);
   const [largeOrders, setLargeOrders] = useState<LargeOrder[]>([]);
+  const [ordersPrecisionIndex, setOrdersPrecisionIndex] = useState<number>(2); // Default to "Medium" precision (3rd level)
   const maxLiquidityRef = useRef<number>(0); // Track max liquidity for bar width scaling
   const isInitialLoadRef = useRef<boolean>(true); // Track if this is the first data load
+
+  // Notify parent when interval changes (for Order Book precision sync)
+  useEffect(() => {
+    if (onIntervalChange) {
+      onIntervalChange(interval);
+    }
+  }, [interval, onIntervalChange]);
 
   // Handle trade effect trigger from parent
   useEffect(() => {
@@ -352,19 +424,26 @@ export default function Chart({
     }
   }, [priceUsd, currentChartPrice]);
 
-  // Process pre-aggregated order data from Order Book
-  // Sort by price (closest to current price) and take top 10 from each side
+  // Calculate precision options based on current price
+  const precisionOptions = getPrecisionOptions(currentChartPrice || priceUsd || 1);
+  const currentPrecision = precisionOptions[Math.min(ordersPrecisionIndex, precisionOptions.length - 1)] || 0.01;
+
+  // Process raw order data from Order Book - aggregate using Chart's precision setting
+  // Sort by price (closest to current price) and take top 5 from each side
   useEffect(() => {
     if (!showLargeOrders || !orderBookData) {
       setLargeOrders([]);
       return;
     }
 
-    const { bids, asks } = orderBookData;
-    console.log(`[Chart] Received orderBookData: ${bids.length} bids, ${asks.length} asks`);
+    // Aggregate raw data using Chart's precision
+    const aggregated = aggregateOrderData(orderBookData, currentPrecision);
+    const { bids, asks } = aggregated;
+
+    console.log(`[Chart] Orders precision: ${currentPrecision}, aggregated: ${bids.length} bids, ${asks.length} asks`);
 
     // Bids: sort by price descending (highest price = closest to current), take top 5
-    const top10Bids: LargeOrder[] = [...bids]
+    const top5Bids: LargeOrder[] = [...bids]
       .sort((a, b) => b.price - a.price)  // Descending - highest price first
       .slice(0, 5)
       .map((bid, index) => ({
@@ -372,13 +451,10 @@ export default function Chart({
         liquidityUSD: bid.liquidityUSD,
         type: 'bid' as const,
         rank: index + 1,  // 1 = closest to current price, 5 = farthest
-        percentageAboveAvg: 0,
-        token0Amount: 0,
-        token1Amount: 0,
       }));
 
     // Asks: sort by price ascending (lowest price = closest to current), take top 5
-    const top10Asks: LargeOrder[] = [...asks]
+    const top5Asks: LargeOrder[] = [...asks]
       .sort((a, b) => a.price - b.price)  // Ascending - lowest price first
       .slice(0, 5)
       .map((ask, index) => ({
@@ -386,24 +462,17 @@ export default function Chart({
         liquidityUSD: ask.liquidityUSD,
         type: 'ask' as const,
         rank: index + 1,  // 1 = closest to current price, 5 = farthest
-        percentageAboveAvg: 0,
-        token0Amount: 0,
-        token1Amount: 0,
       }));
 
-    console.log(`[Chart] Top 10 bids (by price desc):`, top10Bids.map(b => ({ price: b.price.toFixed(8), liq: b.liquidityUSD.toFixed(0) })));
-    console.log(`[Chart] Top 10 asks (by price asc):`, top10Asks.map(a => ({ price: a.price.toFixed(8), liq: a.liquidityUSD.toFixed(0) })));
-
-    // Combine top 10 bids + top 10 asks = 20 lines max
-    const orders = [...top10Bids, ...top10Asks];
-    console.log(`[Chart] Total orders: ${orders.length} (${top10Bids.length} bids + ${top10Asks.length} asks)`);
+    // Combine top 5 bids + top 5 asks = 10 lines max
+    const orders = [...top5Bids, ...top5Asks];
 
     if (orders.length > 0) {
       maxLiquidityRef.current = Math.max(...orders.map(o => o.liquidityUSD));
     }
 
     setLargeOrders(orders);
-  }, [orderBookData, showLargeOrders]);
+  }, [orderBookData, showLargeOrders, currentPrecision]);
 
   // Attach OrderBook primitive to candlestick series (after chart initialization)
   useEffect(() => {
@@ -501,18 +570,35 @@ export default function Chart({
 
         {/* Right side controls */}
         <div className="flex items-center gap-1 sm:gap-3">
-          {/* Orders Toggle Button */}
-          <button
-            onClick={() => setShowLargeOrders(!showLargeOrders)}
-            className={`px-2 py-1 text-xs rounded border cursor-pointer ${
-              showLargeOrders
-                ? 'bg-[#58a6ff]/20 text-[#58a6ff] border-[#58a6ff]/50'
-                : 'bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d]'
-            }`}
-            title="Toggle order book lines on chart"
-          >
-            Orders
-          </button>
+          {/* Orders Toggle Button + Precision Selector */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowLargeOrders(!showLargeOrders)}
+              className={`px-2 py-1 text-xs rounded-l border cursor-pointer ${
+                showLargeOrders
+                  ? 'bg-[#58a6ff]/20 text-[#58a6ff] border-[#58a6ff]/50'
+                  : 'bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d]'
+              }`}
+              title="Toggle order book lines on chart"
+            >
+              Orders
+            </button>
+            {/* Precision Selector - only show when Orders is enabled */}
+            {showLargeOrders && (
+              <select
+                value={ordersPrecisionIndex}
+                onChange={(e) => setOrdersPrecisionIndex(parseInt(e.target.value))}
+                className="text-xs px-1.5 py-1 bg-[#21262d] text-gray-300 rounded-r border border-l-0 border-[#58a6ff]/50 cursor-pointer hover:bg-[#30363d] focus:outline-none"
+                title="Orders precision level"
+              >
+                {precisionOptions.map((precision, idx) => (
+                  <option key={precision} value={idx}>
+                    {formatPrecision(precision)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
           {/* Fit Content Button */}
           <button

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { PoolInfo, SearchResult, SUPPORTED_CHAINS } from '@/types';
+import { PoolInfo, SearchResult, SUPPORTED_CHAINS, TimeInterval } from '@/types';
 import { formatNumber, formatPercentage, searchPools, formatPrice } from '@/lib/api';
 import { ArrowLeft, ExternalLink, Copy, Check, Globe, Twitter, MessageCircle, Search, X, Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -67,8 +67,9 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
   const [holdersCount, setHoldersCount] = useState<number | null>(null);
   const [livePrice, setLivePrice] = useState<number>(pool.priceUsd);
   const [orderBookPrecision, setOrderBookPrecision] = useState<number>(0); // Shared precision from Order Book
-  // Aggregated order data from Order Book for Chart liquidity lines
-  const [orderBookData, setOrderBookData] = useState<{ bids: Array<{ price: number; liquidityUSD: number }>; asks: Array<{ price: number; liquidityUSD: number }> } | null>(null);
+  const [chartTimeframe, setChartTimeframe] = useState<TimeInterval>('1h'); // Chart timeframe for Order Book precision default
+  // Raw order data from Order Book for Chart liquidity lines (Chart will aggregate using its own precision)
+  const [orderBookData, setOrderBookData] = useState<{ bids: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }>; asks: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }> } | null>(null);
   const priceChangeColor = pool.priceChange24h >= 0 ? 'text-[#3fb950]' : 'text-[#f85149]';
 
   // Search state
@@ -98,8 +99,13 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
     setOrderBookPrecision(precision);
   }, []);
 
-  // Handle aggregated order data from Order Book for Chart liquidity lines
-  const handleOrderDataChange = useCallback((data: { bids: Array<{ price: number; liquidityUSD: number }>; asks: Array<{ price: number; liquidityUSD: number }> }) => {
+  // Handle timeframe change from Chart for Order Book precision sync
+  const handleIntervalChange = useCallback((interval: TimeInterval) => {
+    setChartTimeframe(interval);
+  }, []);
+
+  // Handle raw order data from Order Book (Chart will aggregate using its own precision)
+  const handleOrderDataChange = useCallback((data: { bids: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }>; asks: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }> }) => {
     setOrderBookData(data);
   }, []);
 
@@ -470,6 +476,7 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
             token0Decimals={pool.baseToken.decimals}
             token1Decimals={pool.quoteToken.decimals}
             dexId={pool.dex}
+            timeframe={chartTimeframe}
             onPrecisionChange={handlePrecisionChange}
             onOrderDataChange={handleOrderDataChange}
           />
@@ -493,6 +500,7 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
               tradeEffect={tradeEffect}
               onTradeEffectComplete={handleTradeEffectComplete}
               onPriceUpdate={handlePriceUpdate}
+              onIntervalChange={handleIntervalChange}
               token0Decimals={pool.baseToken.decimals}
               token1Decimals={pool.quoteToken.decimals}
               token0Symbol={pool.baseToken.symbol}

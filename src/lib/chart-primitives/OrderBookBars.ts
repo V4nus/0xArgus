@@ -85,40 +85,62 @@ export class OrderBookBarsPrimitive implements ISeriesPrimitive<Time> {
     // Clear existing lines first
     this._clearPriceLines();
 
-    // Calculate max liquidity for line width scaling
-    const maxLiquidity = this._orders.length > 0
-      ? Math.max(...this._orders.map(o => o.liquidityUSD))
-      : 0;
+    console.log(`[OrderBookBars] Creating ${this._orders.length} price lines`);
 
-    console.log(`[OrderBookBars] Creating ${this._orders.length} price lines, maxLiquidity=${maxLiquidity}`);
+    // Separate bids and asks, then sort by liquidity to get relative ranking
+    const bids = this._orders.filter(o => o.type === 'bid');
+    const asks = this._orders.filter(o => o.type === 'ask');
+
+    // Sort by liquidityUSD descending to determine rank (highest = rank 0)
+    const sortedBids = [...bids].sort((a, b) => b.liquidityUSD - a.liquidityUSD);
+    const sortedAsks = [...asks].sort((a, b) => b.liquidityUSD - a.liquidityUSD);
+
+    // Create rank map: liquidityUSD -> rank index (0 = highest)
+    const bidRankMap = new Map<number, number>();
+    const askRankMap = new Map<number, number>();
+    sortedBids.forEach((bid, idx) => bidRankMap.set(bid.liquidityUSD, idx));
+    sortedAsks.forEach((ask, idx) => askRankMap.set(ask.liquidityUSD, idx));
 
     // Create price lines for each order
     let createdCount = 0;
     this._orders.forEach(order => {
-      // Use rank for color/width: rank 1 = darkest/thickest, rank 5 = lightest/thinnest
-      // ratio: 1.0 for rank 1, 0.0 for rank 5
-      const ratio = order.rank > 0 ? (6 - order.rank) / 5 : 0;  // rank 1 -> 1.0, rank 5 -> 0.2
+      // Calculate intensity based on relative rank within bids or asks
+      // Rank 0 (highest liquidity) = intensity 1.0 (darkest)
+      // Rank N (lowest liquidity) = intensity ~0.1 (lightest)
+      let intensity: number;
+      if (order.type === 'bid') {
+        const rank = bidRankMap.get(order.liquidityUSD) ?? 0;
+        const total = sortedBids.length;
+        // Highest liquidity (rank 0) -> 1.0, lowest -> 0.15
+        intensity = total > 1 ? 1.0 - (rank / (total - 1)) * 0.85 : 1.0;
+      } else {
+        const rank = askRankMap.get(order.liquidityUSD) ?? 0;
+        const total = sortedAsks.length;
+        intensity = total > 1 ? 1.0 - (rank / (total - 1)) * 0.85 : 1.0;
+      }
 
-      // Calculate line width based on rank (1-4 pixels)
-      // rank 1 = 4px, rank 5 = 1px
-      const lineWidth = Math.max(1, Math.round(ratio * 4)) as 1 | 2 | 3 | 4;
+      // Ensure minimum intensity
+      intensity = Math.max(0.15, intensity);
 
-      // Gradient colors based on rank
-      // Bids: dark green (rank 1) -> light green (rank 5)
-      // Asks: dark red (rank 1) -> light red (rank 5)
+      // Calculate line width based on intensity (1-4 pixels)
+      const lineWidth = Math.max(1, Math.min(4, Math.ceil(intensity * 4))) as 1 | 2 | 3 | 4;
+
+      // Gradient colors based on relative rank
+      // Bids (green): light (#90EE90) -> dark (#22B422)
+      // Asks (red): light (#FFB6B6) -> dark (#DC2626)
       let color: string;
       if (order.type === 'bid') {
-        // Green gradient: rgb(34, 180, 34) dark -> rgb(144, 238, 144) light
-        const r = Math.round(144 - ratio * (144 - 34));
-        const g = Math.round(238 - ratio * (238 - 180));
-        const b = Math.round(144 - ratio * (144 - 34));
-        color = `rgba(${r}, ${g}, ${b}, 0.9)`;
+        // Green gradient: light rgb(144, 238, 144) -> dark rgb(34, 180, 34)
+        const r = Math.round(144 - intensity * (144 - 34));
+        const g = Math.round(238 - intensity * (238 - 180));
+        const b = Math.round(144 - intensity * (144 - 34));
+        color = `rgba(${r}, ${g}, ${b}, ${0.4 + intensity * 0.5})`;
       } else {
-        // Red gradient: rgb(220, 38, 38) dark -> rgb(255, 182, 182) light
-        const r = Math.round(255 - ratio * (255 - 220));
-        const g = Math.round(182 - ratio * (182 - 38));
-        const b = Math.round(182 - ratio * (182 - 38));
-        color = `rgba(${r}, ${g}, ${b}, 0.9)`;
+        // Red gradient: light rgb(255, 182, 182) -> dark rgb(220, 38, 38)
+        const r = Math.round(255 - intensity * (255 - 220));
+        const g = Math.round(182 - intensity * (182 - 38));
+        const b = Math.round(182 - intensity * (182 - 38));
+        color = `rgba(${r}, ${g}, ${b}, ${0.4 + intensity * 0.5})`;
       }
 
       const options: CreatePriceLineOptions = {

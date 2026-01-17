@@ -6,11 +6,12 @@ import { formatNumber } from '@/lib/api';
 import { isStablecoin } from '@/lib/quote-prices';
 import { getRealtimeService, TradeEvent } from '@/lib/realtime';
 import { useTranslations } from '@/lib/i18n/context';
+import { TimeInterval } from '@/types';
 
-// Aggregated order data for Chart sync
-export interface AggregatedOrderData {
-  bids: Array<{ price: number; liquidityUSD: number }>;
-  asks: Array<{ price: number; liquidityUSD: number }>;
+// Raw order data for Chart sync (Chart will aggregate using its own precision)
+export interface RawOrderData {
+  bids: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }>;
+  asks: Array<{ price: number; liquidityUSD: number; token0Amount: number; token1Amount: number }>;
 }
 
 interface LiquidityDepthProps {
@@ -27,9 +28,22 @@ interface LiquidityDepthProps {
   token0Decimals?: number;
   token1Decimals?: number;
   dexId?: string; // DEX identifier (e.g., "pumpswap", "raydium_clmm", "orca")
+  timeframe?: TimeInterval; // Chart timeframe for precision default (1m, 5m, 15m, 1h, 4h, 1d, 1w)
   onPrecisionChange?: (precision: number) => void; // Callback when precision changes
-  onOrderDataChange?: (data: AggregatedOrderData) => void; // Callback when aggregated data changes
+  onOrderDataChange?: (data: RawOrderData) => void; // Callback when raw data changes (Chart will aggregate)
 }
+
+// Timeframe to precision multiplier mapping
+// Shorter timeframes = finer precision, longer timeframes = coarser precision
+const TIMEFRAME_PRECISION_INDEX: Record<TimeInterval, number> = {
+  '1m': 0,   // Very fine (e.g., 0.001 for $5)
+  '5m': 0,   // Very fine
+  '15m': 1,  // Fine (e.g., 0.01 for $5)
+  '1h': 1,   // Fine
+  '4h': 2,   // Medium (e.g., 0.1 for $5)
+  '1d': 2,   // Medium
+  '1w': 3,   // Coarse (e.g., 1.0 for $5)
+};
 
 // Dynamic precision based on current price
 type ViewMode = 'individual' | 'cumulative';
@@ -56,6 +70,7 @@ export default function LiquidityDepth({
   token0Decimals,
   token1Decimals,
   dexId,
+  timeframe = '1h', // Default to 1h if not provided
   onPrecisionChange,
   onOrderDataChange,
 }: LiquidityDepthProps) {
@@ -70,7 +85,7 @@ export default function LiquidityDepth({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [poolVersion, setPoolVersion] = useState<string | null>(null); // V2, V3, V4
-  const [precisionIndex, setPrecisionIndex] = useState<number>(1); // 0=very fine, 1=fine, 2=medium, 3=coarse
+  const [precisionIndex, setPrecisionIndex] = useState<number | null>(null); // null = use timeframe default
   const [viewMode, setViewMode] = useState<ViewMode>('individual');
   const [changedValues, setChangedValues] = useState<Map<string, ChangedValue>>(new Map());
   const [quoteTokenUsdPrice, setQuoteTokenUsdPrice] = useState<number>(1);
@@ -421,8 +436,16 @@ export default function LiquidityDepth({
   };
 
   const precisionOptions = depthData?.currentPrice ? getPrecisionOptions(depthData.currentPrice) : [0.0001, 0.001, 0.01];
-  const safeIndex = Math.min(precisionIndex, precisionOptions.length - 1);
+  // Get precision index: use manual selection if set, otherwise use timeframe default
+  const timeframeDefaultIndex = TIMEFRAME_PRECISION_INDEX[timeframe] ?? 1;
+  const effectivePrecisionIndex = precisionIndex ?? timeframeDefaultIndex;
+  const safeIndex = Math.min(effectivePrecisionIndex, precisionOptions.length - 1);
   const currentPrecision = precisionOptions[safeIndex] || 0.001;
+
+  // Reset to timeframe default when timeframe changes
+  useEffect(() => {
+    setPrecisionIndex(null); // Reset manual selection, use timeframe default
+  }, [timeframe]);
 
   // Notify parent when precision changes (for Chart sync)
   useEffect(() => {
@@ -431,22 +454,29 @@ export default function LiquidityDepth({
     }
   }, [currentPrecision, onPrecisionChange]);
 
-  // Notify parent when aggregated order data changes (for Chart liquidity lines)
+  // Notify parent when raw order data changes (Chart will aggregate using its own precision)
   useEffect(() => {
     if (!onOrderDataChange) return;
     if (!depthData || !depthData.bids.length || !depthData.asks.length) return;
 
-    const filteredData = getFilteredData();
-    if (!filteredData) return;
-
-    // Send aggregated bids and asks to Chart
-    const orderData: AggregatedOrderData = {
-      bids: filteredData.bids.map(b => ({ price: b.price, liquidityUSD: b.liquidityUSD })),
-      asks: filteredData.asks.map(a => ({ price: a.price, liquidityUSD: a.liquidityUSD })),
+    // Send raw (non-aggregated) bids and asks to Chart
+    const orderData: RawOrderData = {
+      bids: depthData.bids.map(b => ({
+        price: b.price,
+        liquidityUSD: b.liquidityUSD,
+        token0Amount: b.token0Amount,
+        token1Amount: b.token1Amount,
+      })),
+      asks: depthData.asks.map(a => ({
+        price: a.price,
+        liquidityUSD: a.liquidityUSD,
+        token0Amount: a.token0Amount,
+        token1Amount: a.token1Amount,
+      })),
     };
 
     onOrderDataChange(orderData);
-  }, [depthData, currentPrecision, onOrderDataChange]);
+  }, [depthData, onOrderDataChange]); // Note: removed precision dependency - Chart handles its own aggregation
 
   // Aggregate depth data by price precision (like Binance/Gate)
   const getFilteredData = () => {
@@ -581,22 +611,18 @@ export default function LiquidityDepth({
                 </span>
               )}
             </div>
-            {/* Precision Selector - dynamic based on price */}
-            <div className="flex items-center gap-0.5 sm:gap-1 bg-[#21262d] rounded p-0.5">
+            {/* Precision Selector - dropdown style */}
+            <select
+              value={effectivePrecisionIndex}
+              onChange={(e) => setPrecisionIndex(parseInt(e.target.value))}
+              className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-[#21262d] text-gray-300 rounded border border-[#30363d] cursor-pointer hover:border-[#484f58] focus:outline-none focus:border-[#58a6ff]"
+            >
               {precisionOptions.map((precision, idx) => (
-                <button
-                  key={precision}
-                  onClick={() => setPrecisionIndex(idx)}
-                  className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs rounded transition-colors ${
-                    precisionIndex === idx
-                      ? 'bg-[#30363d] text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
+                <option key={precision} value={idx}>
                   {formatPrecision(precision)}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
           {/* Row 2: View Mode Toggle + Large Orders Toggle */}
           <div className="flex items-center justify-between gap-2">
