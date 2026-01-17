@@ -8,6 +8,7 @@ import {
   Github,
   Twitter,
   ChevronDown,
+  BookOpen,
 } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 
@@ -100,6 +101,10 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
                 <a href="#features" className="hover:text-white transition-colors">Features</a>
+                <Link href="/wiki" className="hover:text-white transition-colors flex items-center gap-1.5">
+                  <BookOpen size={14} />
+                  Wiki
+                </Link>
               </nav>
               <div className="flex items-center gap-4">
                 <a
