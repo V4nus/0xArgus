@@ -213,10 +213,15 @@ export default function LiquidityDepth({
           params.set('token1Address', quoteTokenAddress);
         }
 
+        // Add token info params for all chains (required for V4 pools, useful for Solana)
+        params.set('baseSymbol', baseSymbol);
+        params.set('quoteSymbol', quoteSymbol);
+        params.set('baseDecimals', (token0Decimals || 18).toString());
+        params.set('quoteDecimals', (token1Decimals || 18).toString());
+
         // Add Solana-specific params
         if (chainId === 'solana') {
-          params.set('baseSymbol', baseSymbol);
-          params.set('quoteSymbol', quoteSymbol);
+          // Override decimals for Solana (default 9)
           params.set('baseDecimals', (token0Decimals || 9).toString());
           params.set('quoteDecimals', (token1Decimals || 9).toString());
           if (dexId) params.set('dexId', dexId);
