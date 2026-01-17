@@ -13,6 +13,26 @@ const DEXSCREENER_API = 'https://api.dexscreener.com';
 // GeckoTerminal API - for OHLCV data (free, no API key needed)
 const GECKOTERMINAL_API = 'https://api.geckoterminal.com/api/v2';
 
+// ============ Safe Number Parsing ============
+
+/**
+ * Safely parse a float value, returning 0 for invalid inputs
+ */
+function safeParseFloat(value: string | number | undefined | null): number {
+  if (value === undefined || value === null) return 0;
+  const num = typeof value === 'number' ? value : parseFloat(value);
+  return isNaN(num) || !isFinite(num) ? 0 : num;
+}
+
+/**
+ * Safely parse an integer value, returning 0 for invalid inputs
+ */
+function safeParseInt(value: string | number | undefined | null): number {
+  if (value === undefined || value === null) return 0;
+  const num = typeof value === 'number' ? Math.floor(value) : parseInt(value, 10);
+  return isNaN(num) || !isFinite(num) ? 0 : num;
+}
+
 // ============ Client-side Cache ============
 interface CacheEntry<T> {
   data: T;
@@ -163,8 +183,8 @@ export async function getPoolInfo(chainId: string, poolAddress: string): Promise
         decimals: getDefaultDecimals(pair.quoteToken.symbol, pair.chainId),
         // Quote token logo - try to get from common tokens or leave undefined
       },
-      priceUsd: parseFloat(pair.priceUsd) || 0,
-      priceNative: parseFloat(pair.priceNative) || 0,
+      priceUsd: safeParseFloat(pair.priceUsd),
+      priceNative: safeParseFloat(pair.priceNative),
       priceChange24h: pair.priceChange?.h24 || 0,
       volume24h: pair.volume?.h24 || 0,
       liquidity: pair.liquidity?.usd || 0,

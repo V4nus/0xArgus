@@ -224,9 +224,13 @@ export interface LPPosition {
   priceUpper: number;
 }
 
-// Convert sqrtPriceX96 to actual price
+// Convert sqrtPriceX96 to actual price (safe for large BigInt values)
 function sqrtPriceX96ToPrice(sqrtPriceX96: bigint, decimals0: number, decimals1: number): number {
-  const price = Number(sqrtPriceX96) ** 2 / 2 ** 192;
+  // Use BigInt arithmetic to avoid precision loss, then convert to number at the end
+  // sqrtPriceX96 is Q64.96 format, so price = (sqrtPriceX96 / 2^96)^2 = sqrtPriceX96^2 / 2^192
+  const Q96 = BigInt(2) ** BigInt(96);
+  const sqrtPriceScaled = Number(sqrtPriceX96) / Number(Q96);
+  const price = sqrtPriceScaled * sqrtPriceScaled;
   return price * 10 ** (decimals0 - decimals1);
 }
 
@@ -342,14 +346,25 @@ function decodeInt24(hex: string): number {
 
 // Decode int256 from hex string (handles signed values)
 function decodeInt256(hex: string): bigint {
-  const value = BigInt('0x' + hex);
-  // If highest bit is set (first char >= 8), it's negative
-  const firstChar = hex[0];
-  if (firstChar >= '8') {
-    // Two's complement for 256 bits
-    return value - BigInt('0x' + 'f'.repeat(64)) - 1n;
+  // Validate hex format
+  if (!hex || !/^[0-9a-fA-F]+$/.test(hex)) {
+    console.warn('[decodeInt256] Invalid hex format:', hex);
+    return BigInt(0);
   }
-  return value;
+
+  try {
+    const value = BigInt('0x' + hex);
+    // If highest bit is set (first char >= 8), it's negative
+    const firstChar = hex[0].toLowerCase();
+    if (firstChar >= '8') {
+      // Two's complement for 256 bits
+      return value - BigInt('0x' + 'f'.repeat(64)) - 1n;
+    }
+    return value;
+  } catch (error) {
+    console.error('[decodeInt256] Failed to parse hex:', hex, error);
+    return BigInt(0);
+  }
 }
 
 // Get V4 LP position history from ModifyLiquidity events

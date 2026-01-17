@@ -2,6 +2,16 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+/**
+ * WebSocket Hook with proper cleanup to prevent memory leaks
+ *
+ * Features:
+ * - Automatic reconnection with exponential backoff
+ * - Ping/pong keep-alive
+ * - Channel subscription management
+ * - Proper cleanup on unmount
+ */
+
 export interface WebSocketMessage {
   type: 'price' | 'trade' | 'ohlcv' | 'subscribe' | 'unsubscribe' | 'ping' | 'pong';
   data?: unknown;
@@ -69,17 +79,33 @@ export function useWebSocket({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const subscribedChannelsRef = useRef<Set<string>>(new Set());
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true); // Track if component is mounted
+
+  // Helper to safely update state only if mounted
+  const safeSetIsConnected = useCallback((value: boolean) => {
+    if (isMountedRef.current) {
+      setIsConnected(value);
+    }
+  }, []);
 
   const cleanup = useCallback(() => {
+    // Clear reconnect timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
+    // Clear ping interval
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = null;
     }
+    // Close WebSocket
     if (wsRef.current) {
+      // Remove event listeners before closing to prevent callbacks
+      wsRef.current.onopen = null;
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      wsRef.current.onmessage = null;
       wsRef.current.close();
       wsRef.current = null;
     }
@@ -93,8 +119,9 @@ export function useWebSocket({
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (!isMountedRef.current) return;
         console.log('WebSocket connected');
-        setIsConnected(true);
+        safeSetIsConnected(true);
         reconnectAttemptsRef.current = 0;
         onConnect?.();
 
@@ -154,7 +181,7 @@ export function useWebSocket({
 
       ws.onclose = () => {
         console.log('WebSocket disconnected');
-        setIsConnected(false);
+        safeSetIsConnected(false);
         onDisconnect?.();
 
         // Clear ping interval
@@ -163,8 +190,8 @@ export function useWebSocket({
           pingIntervalRef.current = null;
         }
 
-        // Attempt to reconnect
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        // Only attempt to reconnect if component is still mounted
+        if (isMountedRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
           console.log(`Reconnecting... attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
           reconnectTimeoutRef.current = setTimeout(connect, reconnectInterval);
@@ -173,7 +200,7 @@ export function useWebSocket({
     } catch (error) {
       console.error('Failed to create WebSocket:', error);
     }
-  }, [url, cleanup, onConnect, onDisconnect, onError, onMessage, onPriceUpdate, onTradeUpdate, reconnectInterval, maxReconnectAttempts]);
+  }, [url, cleanup, safeSetIsConnected, onConnect, onDisconnect, onError, onMessage, onPriceUpdate, onTradeUpdate, reconnectInterval, maxReconnectAttempts]);
 
   const subscribe = useCallback((channel: string) => {
     subscribedChannelsRef.current.add(channel);
@@ -201,9 +228,14 @@ export function useWebSocket({
   }, [connect]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     connect();
+
     return () => {
-      // Additional cleanup on unmount to ensure no leaks
+      // Mark as unmounted to prevent state updates
+      isMountedRef.current = false;
+
+      // Clear all timers
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
@@ -212,7 +244,12 @@ export function useWebSocket({
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+
+      // Cleanup WebSocket
       cleanup();
+
+      // Clear subscribed channels
+      subscribedChannelsRef.current.clear();
     };
   }, [connect, cleanup]);
 

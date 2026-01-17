@@ -53,11 +53,13 @@ const PROGRAM_IDS = {
 
 // ============ RPC Configuration ============
 
+// RPC URLs - use environment variable for private RPC endpoints
 const SOLANA_RPC_URLS = [
+  process.env.SOLANA_RPC_URL,
+  process.env.SOLANA_RPC_URL_BACKUP,
   'https://api.mainnet-beta.solana.com',
   'https://solana-mainnet.rpc.extrnode.com',
-  'https://mainnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff', // Free tier
-];
+].filter((url): url is string => !!url); // Filter out undefined values
 
 // Track which RPC is currently working best
 let currentRpcIndex = 0;
