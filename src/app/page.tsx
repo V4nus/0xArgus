@@ -9,8 +9,10 @@ import {
   Twitter,
   ChevronDown,
   BookOpen,
+  History,
 } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
+import { getSearchHistory, SearchHistoryItem } from '@/lib/search-history';
 
 // Chain logos
 const CHAIN_LOGOS: Record<string, string> = {
@@ -36,9 +38,12 @@ const EXAMPLE_POOLS = [
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    // Load search history from localStorage
+    setSearchHistory(getSearchHistory());
   }, []);
 
   if (!mounted) {
@@ -158,19 +163,44 @@ export default function Home() {
               <SearchBox />
             </div>
 
-            {/* Quick links */}
+            {/* Quick links - Show search history if available, otherwise show examples */}
             <div className="flex flex-wrap items-center justify-center gap-3">
-              {EXAMPLE_POOLS.map((pool) => (
-                <Link
-                  key={pool.address}
-                  href={`/pool/${pool.chain}/${pool.address}`}
-                  className="px-4 py-2 rounded-full bg-[#111] hover:bg-[#1a1a1a] border border-[#222] text-sm text-gray-300 hover:text-white transition-all flex items-center gap-2"
-                >
-                  <img src={pool.logo} alt={pool.symbol} className="w-5 h-5 rounded-full" />
-                  {pool.pair}
-                  <img src={CHAIN_LOGOS[pool.chain]} alt="" className="w-4 h-4 opacity-60" />
-                </Link>
-              ))}
+              {searchHistory.length > 0 ? (
+                <>
+                  {/* History label */}
+                  <span className="flex items-center gap-1.5 text-xs text-gray-500 mr-1">
+                    <History size={12} />
+                    Recent
+                  </span>
+                  {searchHistory.slice(0, 5).map((item) => (
+                    <Link
+                      key={`${item.chainId}-${item.poolAddress}`}
+                      href={`/pool/${item.chainId}/${item.poolAddress}`}
+                      className="px-4 py-2 rounded-full bg-[#111] hover:bg-[#1a1a1a] border border-[#222] text-sm text-gray-300 hover:text-white transition-all flex items-center gap-2"
+                    >
+                      {item.logo && (
+                        <img src={item.logo} alt={item.symbol} className="w-5 h-5 rounded-full" />
+                      )}
+                      {item.pair}
+                      {item.chainLogo && (
+                        <img src={item.chainLogo} alt="" className="w-4 h-4 opacity-60" />
+                      )}
+                    </Link>
+                  ))}
+                </>
+              ) : (
+                EXAMPLE_POOLS.map((pool) => (
+                  <Link
+                    key={pool.address}
+                    href={`/pool/${pool.chain}/${pool.address}`}
+                    className="px-4 py-2 rounded-full bg-[#111] hover:bg-[#1a1a1a] border border-[#222] text-sm text-gray-300 hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <img src={pool.logo} alt={pool.symbol} className="w-5 h-5 rounded-full" />
+                    {pool.pair}
+                    <img src={CHAIN_LOGOS[pool.chain]} alt="" className="w-4 h-4 opacity-60" />
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 

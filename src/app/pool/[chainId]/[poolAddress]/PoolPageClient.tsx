@@ -8,6 +8,7 @@ import { ArrowLeft, ExternalLink, Copy, Check, Globe, Twitter, MessageCircle, Se
 import { useState, useEffect, useCallback, useRef } from 'react';
 import TokenLogo, { TokenPairLogos } from '@/components/TokenLogo';
 import { useRouter } from 'next/navigation';
+import { addToSearchHistory } from '@/lib/search-history';
 
 // Dynamic imports for client components
 const Chart = dynamic(() => import('@/components/Chart'), {
@@ -109,6 +110,16 @@ export default function PoolPageClient({ pool }: PoolPageClientProps) {
     setOrderBookData(data);
   }, []);
 
+  // Save to search history when pool page loads
+  useEffect(() => {
+    addToSearchHistory({
+      chainId: pool.chainId,
+      poolAddress: pool.address,
+      symbol: pool.baseToken.symbol,
+      pair: `${pool.baseToken.symbol}/${pool.quoteToken.symbol}`,
+      logo: pool.baseToken.imageUrl,
+    });
+  }, [pool.chainId, pool.address, pool.baseToken.symbol, pool.baseToken.imageUrl, pool.quoteToken.symbol]);
 
   // Search functionality
   useEffect(() => {
