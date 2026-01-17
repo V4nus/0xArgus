@@ -3,20 +3,20 @@
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Github, Database, Zap, Globe, LineChart, Layers, Code2, Server, Shield, BookOpen, GitBranch, Waves } from 'lucide-react';
 
-// 文档卡片数据
+// Documentation cards
 const DOC_CARDS = [
   {
     id: 'uniswap',
-    title: 'Uniswap 解析原理',
-    description: 'V2 恒定乘积、V3 集中流动性、V4 单例架构的流动性解析',
+    title: 'Uniswap Liquidity Analysis',
+    description: 'V2 constant product, V3 concentrated liquidity, V4 singleton architecture',
     icon: GitBranch,
     color: '#a855f7',
     href: '/wiki/uniswap',
   },
   {
     id: 'solana',
-    title: 'Solana 解析原理',
-    description: 'Raydium、Orca、Meteora、PumpSwap 等 DEX 协议解析',
+    title: 'Solana DEX Analysis',
+    description: 'Raydium, Orca, Meteora, PumpSwap protocol parsing',
     icon: Waves,
     color: '#06b6d4',
     href: '/wiki/solana',
@@ -32,10 +32,10 @@ export default function WikiPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
               <ArrowLeft size={18} />
-              <span className="text-sm">首页</span>
+              <span className="text-sm">Home</span>
             </Link>
             <span className="text-gray-600">|</span>
-            <h1 className="text-lg font-medium">0xArgus 技术文档</h1>
+            <h1 className="text-lg font-medium">0xArgus Technical Documentation</h1>
           </div>
           <a
             href="https://github.com/V4nus/0xArgus"
@@ -49,21 +49,21 @@ export default function WikiPage() {
       </header>
 
       <main className="pt-20 pb-16 px-6 max-w-5xl mx-auto">
-        {/* 项目概览 */}
+        {/* Project Overview */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <BookOpen className="text-[#22c55e]" size={24} />
-            项目概览
+            Project Overview
           </h2>
           <p className="text-gray-300 mb-6 text-lg">
-            <span className="text-[#22c55e] font-semibold">0xArgus</span> 是一个 AMM 流动性分析平台，将流动性池转换为订单簿深度显示，揭示隐藏的支撑位和阻力位。
+            <span className="text-[#22c55e] font-semibold">0xArgus</span> is an AMM liquidity analysis platform that transforms liquidity pools into order book depth displays, revealing hidden support and resistance levels.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: '框架', value: 'Next.js 16' },
-              { label: '语言', value: 'TypeScript 5' },
-              { label: '数据库', value: 'PostgreSQL' },
-              { label: '代码规模', value: '20,000+ 行' },
+              { label: 'Framework', value: 'Next.js 16' },
+              { label: 'Language', value: 'TypeScript 5' },
+              { label: 'Database', value: 'PostgreSQL' },
+              { label: 'Codebase', value: '20,000+ lines' },
             ].map((item) => (
               <div key={item.label} className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-4">
                 <p className="text-gray-500 text-sm">{item.label}</p>
@@ -73,11 +73,11 @@ export default function WikiPage() {
           </div>
         </section>
 
-        {/* 解析原理文档卡片 */}
+        {/* Analysis Documentation Cards */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <Code2 className="text-[#22c55e]" size={24} />
-            解析原理
+            Analysis Principles
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
             {DOC_CARDS.map((card) => {
@@ -100,15 +100,15 @@ export default function WikiPage() {
           </div>
         </section>
 
-        {/* 技术栈 */}
+        {/* Tech Stack */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <Layers className="text-[#22c55e]" size={24} />
-            技术栈
+            Tech Stack
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-5">
-              <h3 className="font-medium mb-3 text-[#22c55e]">前端</h3>
+              <h3 className="font-medium mb-3 text-[#22c55e]">Frontend</h3>
               <div className="flex flex-wrap gap-2">
                 {['React 19', 'Next.js 16', 'TailwindCSS', 'Three.js', 'lightweight-charts'].map((t) => (
                   <span key={t} className="px-2 py-1 bg-[#1a1a1a] rounded text-sm text-gray-300">{t}</span>
@@ -116,7 +116,7 @@ export default function WikiPage() {
               </div>
             </div>
             <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-5">
-              <h3 className="font-medium mb-3 text-[#22c55e]">区块链</h3>
+              <h3 className="font-medium mb-3 text-[#22c55e]">Blockchain</h3>
               <div className="flex flex-wrap gap-2">
                 {['viem', 'wagmi', 'ethers', '@solana/web3.js', 'Uniswap SDK'].map((t) => (
                   <span key={t} className="px-2 py-1 bg-[#1a1a1a] rounded text-sm text-gray-300">{t}</span>
@@ -126,11 +126,11 @@ export default function WikiPage() {
           </div>
         </section>
 
-        {/* 支持的链 */}
+        {/* Supported Chains */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <Globe className="text-[#22c55e]" size={24} />
-            支持的链
+            Supported Chains
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -150,11 +150,11 @@ export default function WikiPage() {
           </div>
         </section>
 
-        {/* 系统架构 */}
+        {/* System Architecture */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <Server className="text-[#22c55e]" size={24} />
-            系统架构
+            System Architecture
           </h2>
           <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-6 overflow-x-auto">
             <pre className="text-xs sm:text-sm text-gray-300">
@@ -180,21 +180,21 @@ export default function WikiPage() {
           </div>
         </section>
 
-        {/* API & 数据库 */}
+        {/* API & Database */}
         <div className="grid md:grid-cols-2 gap-6 mb-12">
           <section>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Zap className="text-[#22c55e]" size={20} />
-              核心 API
+              Core APIs
             </h2>
             <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-5">
               <ul className="space-y-2 text-sm">
                 {[
-                  { path: '/api/liquidity-depth', desc: '流动性深度' },
-                  { path: '/api/ohlcv', desc: 'K 线数据' },
-                  { path: '/api/trades', desc: '交易历史' },
-                  { path: '/api/uniswap-quote', desc: '报价引擎' },
-                  { path: '/api/trending', desc: '趋势池' },
+                  { path: '/api/liquidity-depth', desc: 'Liquidity Depth' },
+                  { path: '/api/ohlcv', desc: 'Candlestick Data' },
+                  { path: '/api/trades', desc: 'Trade History' },
+                  { path: '/api/uniswap-quote', desc: 'Quote Engine' },
+                  { path: '/api/trending', desc: 'Trending Pools' },
                 ].map((api) => (
                   <li key={api.path} className="flex justify-between">
                     <code className="text-[#22c55e]">{api.path}</code>
@@ -208,16 +208,16 @@ export default function WikiPage() {
           <section>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Database className="text-[#22c55e]" size={20} />
-              数据模型
+              Data Models
             </h2>
             <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-5">
               <ul className="space-y-2 text-sm">
                 {[
-                  { name: 'Pool', desc: '池元数据' },
-                  { name: 'LPPosition', desc: 'LP 头寸' },
-                  { name: 'OHLCVCandle', desc: 'K 线数据' },
-                  { name: 'LiquiditySnapshot', desc: '流动性快照' },
-                  { name: 'V4Trade', desc: 'V4 交易事件' },
+                  { name: 'Pool', desc: 'Pool Metadata' },
+                  { name: 'LPPosition', desc: 'LP Positions' },
+                  { name: 'OHLCVCandle', desc: 'Candlestick Data' },
+                  { name: 'LiquiditySnapshot', desc: 'Liquidity Snapshots' },
+                  { name: 'V4Trade', desc: 'V4 Trade Events' },
                 ].map((model) => (
                   <li key={model.name} className="flex justify-between">
                     <code className="text-[#22c55e]">{model.name}</code>
@@ -229,19 +229,19 @@ export default function WikiPage() {
           </section>
         </div>
 
-        {/* 实时数据 & 安全 */}
+        {/* Real-time & Security */}
         <div className="grid md:grid-cols-2 gap-6">
           <section>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <LineChart className="text-[#22c55e]" size={20} />
-              实时更新
+              Real-time Updates
             </h2>
             <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-5">
               <ul className="space-y-2 text-sm">
-                <li className="flex justify-between"><span className="text-gray-400">价格</span><span className="text-[#22c55e]">1 秒</span></li>
-                <li className="flex justify-between"><span className="text-gray-400">流动性深度</span><span className="text-[#22c55e]">6 秒</span></li>
-                <li className="flex justify-between"><span className="text-gray-400">K 线</span><span className="text-[#22c55e]">10 秒</span></li>
-                <li className="flex justify-between"><span className="text-gray-400">交易历史</span><span className="text-[#22c55e]">5 秒</span></li>
+                <li className="flex justify-between"><span className="text-gray-400">Price</span><span className="text-[#22c55e]">1 second</span></li>
+                <li className="flex justify-between"><span className="text-gray-400">Liquidity Depth</span><span className="text-[#22c55e]">6 seconds</span></li>
+                <li className="flex justify-between"><span className="text-gray-400">Candlesticks</span><span className="text-[#22c55e]">10 seconds</span></li>
+                <li className="flex justify-between"><span className="text-gray-400">Trade History</span><span className="text-[#22c55e]">5 seconds</span></li>
               </ul>
             </div>
           </section>
@@ -249,14 +249,14 @@ export default function WikiPage() {
           <section>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Shield className="text-[#22c55e]" size={20} />
-              安全特性
+              Security Features
             </h2>
             <div className="bg-[#0d1117] border border-[#1a1a1a] rounded-xl p-5">
               <ul className="space-y-2 text-sm text-gray-400">
-                <li>• Slippage 保护 (可配置)</li>
-                <li>• CoW Protocol MEV 保护</li>
-                <li>• Permit2 标准化签名</li>
-                <li>• API 输入验证 & 速率限制</li>
+                <li>• Configurable Slippage Protection</li>
+                <li>• CoW Protocol MEV Protection</li>
+                <li>• Permit2 Standardized Signatures</li>
+                <li>• API Input Validation & Rate Limiting</li>
               </ul>
             </div>
           </section>

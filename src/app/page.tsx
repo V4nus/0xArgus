@@ -11,6 +11,10 @@ import {
   BookOpen,
   History,
   Star,
+  Code2,
+  Zap,
+  Shield,
+  ArrowRight,
 } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { getSearchHistory, SearchHistoryItem } from '@/lib/search-history';
@@ -147,6 +151,10 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <nav className="hidden md:flex items-center gap-8 text-sm text-gray-400">
                 <a href="#features" className="hover:text-white transition-colors">Features</a>
+                <a href="#api" className="hover:text-white transition-colors flex items-center gap-1.5">
+                  <Code2 size={14} />
+                  API
+                </a>
                 <Link href="/wiki" className="hover:text-white transition-colors flex items-center gap-1.5">
                   <BookOpen size={14} />
                   Wiki
@@ -305,6 +313,9 @@ export default function Home() {
 
         {/* Order Flow Section */}
         <OrderFlowSection />
+
+        {/* API Products Section */}
+        <APIProductsSection />
 
         {/* Features Section */}
         <section id="features" className="min-h-screen flex flex-col justify-center py-32 border-t border-[#111] snap-section">
@@ -598,6 +609,172 @@ function OrderFlowSection() {
             </div>
             <span className="text-gray-600">Price · Size · Depth</span>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// API Products Section
+function APIProductsSection() {
+  const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, endpoint: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedEndpoint(endpoint);
+    setTimeout(() => setCopiedEndpoint(null), 2000);
+  };
+
+  const apis = [
+    {
+      id: 'orderbook',
+      name: 'Order Book API',
+      description: 'Real-time bid/ask liquidity depth data for any supported pool. Get precise price levels and token amounts.',
+      price: '$0.001',
+      endpoint: '/api/x402/orderbook',
+      features: ['Real-time data', 'Multi-chain support', 'V2/V3/V4 pools'],
+      example: `curl "https://0xargus.xyz/api/x402/orderbook?chainId=base&poolAddress=0x..."`,
+      responsePreview: {
+        bids: [{ price: 0.00395, liquidityUSD: 74997 }],
+        asks: [{ price: 0.00405, liquidityUSD: 11136 }],
+        stats: { totalBidLiquidity: 74997, totalAskLiquidity: 453187 }
+      }
+    },
+    {
+      id: 'liquidity-depth',
+      name: 'Liquidity Depth API',
+      description: 'Cumulative liquidity curves with price impact analysis. Essential for optimal trade execution.',
+      price: '$0.002',
+      endpoint: '/api/x402/liquidity-depth',
+      features: ['Cumulative curves', 'Price impact %', 'Depth metrics'],
+      example: `curl "https://0xargus.xyz/api/x402/liquidity-depth?chainId=base&poolAddress=0x..."`,
+      responsePreview: {
+        bidCurve: [{ price: 0.00395, cumulativeLiquidityUSD: 74997, priceImpactPercent: 1.2 }],
+        askCurve: [{ price: 0.00405, cumulativeLiquidityUSD: 11136, priceImpactPercent: 1.5 }],
+        stats: { liquidityAt1PercentBid: 25000, liquidityAt5PercentBid: 120000 }
+      }
+    }
+  ];
+
+  return (
+    <section id="api" className="min-h-screen flex flex-col justify-center py-24 border-t border-[#111] snap-section">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#22c55e]/30 bg-[#22c55e]/5 mb-6">
+            <Code2 size={16} className="text-[#22c55e]" />
+            <span className="text-sm text-[#22c55e]">x402 Protocol</span>
+          </div>
+          <h2 className="text-4xl sm:text-5xl font-medium tracking-tight mb-4">
+            Liquidity Data <span className="text-[#22c55e]">API</span>
+          </h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Pay-per-request APIs powered by x402. No subscriptions, no API keys.
+            Just send a payment header and get data.
+          </p>
+        </div>
+
+        {/* API Cards */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-12">
+          {apis.map((api) => (
+            <div
+              key={api.id}
+              className="group relative bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl p-6 hover:border-[#22c55e]/30 transition-all duration-300"
+            >
+              {/* Price badge */}
+              <div className="absolute top-6 right-6">
+                <div className="px-3 py-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/20">
+                  <span className="text-[#22c55e] font-mono text-sm font-medium">{api.price}</span>
+                  <span className="text-gray-500 text-xs ml-1">/req</span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <h3 className="text-xl font-medium mb-2 pr-24">{api.name}</h3>
+              <p className="text-gray-400 text-sm mb-4 leading-relaxed">{api.description}</p>
+
+              {/* Features */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                {api.features.map((feature) => (
+                  <span
+                    key={feature}
+                    className="px-2.5 py-1 rounded-md bg-[#111] text-xs text-gray-400"
+                  >
+                    {feature}
+                  </span>
+                ))}
+              </div>
+
+              {/* Endpoint */}
+              <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">Endpoint</span>
+                  <button
+                    onClick={() => copyToClipboard(api.endpoint, api.id)}
+                    className="text-xs text-gray-500 hover:text-[#22c55e] transition-colors"
+                  >
+                    {copiedEndpoint === api.id ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <code className="text-sm text-[#22c55e] font-mono break-all">{api.endpoint}</code>
+              </div>
+
+              {/* Response Preview */}
+              <div className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-lg p-3">
+                <span className="text-xs text-gray-500 uppercase tracking-wider block mb-2">Response Preview</span>
+                <pre className="text-xs text-gray-400 font-mono overflow-x-auto">
+                  {JSON.stringify(api.responsePreview, null, 2).slice(0, 200)}...
+                </pre>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Benefits */}
+        <div className="grid sm:grid-cols-3 gap-6 mb-12">
+          <div className="flex items-start gap-4 p-5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+            <div className="p-2 rounded-lg bg-[#22c55e]/10">
+              <Zap size={20} className="text-[#22c55e]" />
+            </div>
+            <div>
+              <h4 className="font-medium mb-1">Instant Access</h4>
+              <p className="text-sm text-gray-500">No signup required. Pay with USDC on Base and get data immediately.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4 p-5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+            <div className="p-2 rounded-lg bg-[#22c55e]/10">
+              <Shield size={20} className="text-[#22c55e]" />
+            </div>
+            <div>
+              <h4 className="font-medium mb-1">No API Keys</h4>
+              <p className="text-sm text-gray-500">x402 protocol handles auth. Your payment is your access token.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4 p-5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+            <div className="p-2 rounded-lg bg-[#22c55e]/10">
+              <Code2 size={20} className="text-[#22c55e]" />
+            </div>
+            <div>
+              <h4 className="font-medium mb-1">Simple Integration</h4>
+              <p className="text-sm text-gray-500">Standard REST API. Works with any HTTP client that supports x402.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center">
+          <a
+            href="https://www.x402.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#22c55e] hover:bg-[#1ea84b] text-black font-medium transition-colors"
+          >
+            Learn about x402
+            <ArrowRight size={18} />
+          </a>
+          <p className="text-xs text-gray-500 mt-4">
+            Powered by Coinbase x402 Protocol · Payments on Base Network
+          </p>
         </div>
       </div>
     </section>

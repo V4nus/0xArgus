@@ -45,7 +45,6 @@ const WalletButton = dynamic(() => import('@/components/WalletButton'), {
   ),
 });
 
-
 interface PoolPageClientProps {
   pool: PoolInfo;
 }
