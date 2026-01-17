@@ -322,6 +322,7 @@ export function formatNumber(num: number): string {
 
 /**
  * Format price with appropriate decimal places
+ * For very small prices, uses subscript notation: $0.0₅4430 means 5 zeros after decimal
  */
 export function formatPrice(price: number): string {
   // Handle edge cases: NaN, Infinity, negative
@@ -331,7 +332,34 @@ export function formatPrice(price: number): string {
   if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
   if (price >= 1) return price.toFixed(4);
   if (price >= 0.0001) return price.toFixed(8);
-  return price.toExponential(4);
+
+  // For very small prices, use subscript notation (e.g., 0.0₅4430)
+  return formatPriceSubscript(price);
+}
+
+/**
+ * Format very small prices with subscript notation
+ * e.g., 0.00000443 -> "0.0₅4430" (5 zeros after decimal point)
+ */
+export function formatPriceSubscript(price: number): string {
+  if (price <= 0) return '0';
+
+  // Convert to string to count leading zeros after decimal
+  const priceStr = price.toFixed(20); // High precision
+  const match = priceStr.match(/^0\.(0*)([1-9]\d*)/);
+
+  if (!match) {
+    return price.toFixed(8);
+  }
+
+  const zeroCount = match[1].length; // Number of zeros after decimal point
+  const significantDigits = match[2].slice(0, 4); // Take first 4 significant digits
+
+  // Unicode subscript digits: ₀₁₂₃₄₅₆₇₈₉
+  const subscriptDigits = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+  const subscriptNumber = zeroCount.toString().split('').map(d => subscriptDigits[parseInt(d)]).join('');
+
+  return `0.0${subscriptNumber}${significantDigits}`;
 }
 
 /**
