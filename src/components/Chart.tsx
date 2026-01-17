@@ -160,7 +160,7 @@ export default function Chart({
   const [tradeEffectY, setTradeEffectY] = useState<number | null>(null);
   const [showLargeOrders, setShowLargeOrders] = useState(true);
   const [largeOrders, setLargeOrders] = useState<LargeOrder[]>([]);
-  const [ordersPrecisionIndex, setOrdersPrecisionIndex] = useState<number>(2); // Default to "Medium" precision (3rd level)
+  const [ordersPrecisionIndex, setOrdersPrecisionIndex] = useState<number>(3); // Default to "Coarse" precision (4th level)
   const maxLiquidityRef = useRef<number>(0); // Track max liquidity for bar width scaling
   const isInitialLoadRef = useRef<boolean>(true); // Track if this is the first data load
 
